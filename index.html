@@ -1,0 +1,1849 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+
+    <!-- Apple PWA ve Safari Tam Ekran Meta Etiketleri -->
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="HAMZACHAT">
+    <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/3602/3602145.png">
+
+    <title>HAMZACHAT Terminal // Orange Core & Green Emergency Alert</title>
+    <link rel="manifest" href="./manifest.json">
+
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+
+    <!-- Canvas Confetti CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+
+    <!-- Tailwind CSS & FontAwesome & Fonts -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+
+    <style>
+        :root {
+            --bg-canvas: #cfd6dc;
+            /* Ana Gövde: Turuncu Tasarım */
+            --shell-main: #ff5a09;
+            --shell-highlight: #ff7a2e;
+            --shell-shadow: #d94300;
+            --shell-border: #b83700;
+            --accent-orange: #ff5a09;
+
+            /* Acil Bildirim Pop-up: Yeşil Tasarım */
+            --alert-shell: #57b818;
+            --alert-bezel: #388809;
+            --alert-glow: #7ef72c;
+
+            --screen-bg: #000000;
+            --screen-text: #f4f4f5;
+            --font-sans: 'Plus Jakarta Sans', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            --font-mono: 'JetBrains Mono', monospace;
+        }
+
+        * {
+            box-sizing: border-box;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        input, textarea, .selectable-text {
+            -webkit-user-select: text !important;
+            user-select: text !important;
+        }
+
+        body {
+            margin: 0;
+            padding: 12px 12px 48px 12px;
+            min-height: 100dvh;
+            background-color: var(--bg-canvas);
+            background-image: radial-gradient(circle at 50% 30%, rgba(255, 255, 255, 0.55) 0%, rgba(168, 179, 189, 0.72) 100%);
+            font-family: var(--font-sans);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: #18181b;
+            overflow-x: hidden;
+        }
+
+        .terminal-stage {
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+            max-width: 440px;
+        }
+
+        /* ANA TURUNCU CİHAZ GÖVDESİ */
+        .device-shell {
+            position: relative;
+            z-index: 3;
+            width: 376px;
+            max-width: 100%;
+            border-radius: 34px;
+            background: linear-gradient(160deg, var(--shell-highlight) 0%, var(--shell-main) 52%, var(--shell-shadow) 100%);
+            border: 2px solid var(--shell-border);
+            box-shadow:
+                0 20px 40px rgba(24, 24, 27, 0.25),
+                inset 0 2px 3px rgba(255, 255, 255, 0.45),
+                inset 0 -4px 8px rgba(135, 38, 0, 0.45);
+            padding: 16px 16px 18px 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+        }
+
+        .left-edge-notch {
+            position: absolute;
+            left: -6px;
+            top: 76px;
+            width: 6px;
+            height: 54px;
+            border-radius: 4px 0 0 4px;
+            background: #232429;
+            box-shadow: inset 1px 1px 2px rgba(255, 255, 255, 0.15);
+        }
+
+        /* Alt Kaset Yuvası Ağzı */
+        .bottom-slot-mouth {
+            position: absolute;
+            bottom: -4px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 186px;
+            height: 7px;
+            border-radius: 999px;
+            background: #141518;
+            border: 1px solid #7c2400;
+            box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.85);
+            z-index: 4;
+        }
+
+        /* ALTTAN TAKILIP ÇIKARILAN FİZİKSEL KASET */
+        .cassette-tray {
+            position: relative;
+            z-index: 2;
+            width: 174px;
+            height: 54px;
+            margin-top: -12px;
+            border-radius: 0 0 16px 16px;
+            background: linear-gradient(180deg, #1b1c20 0%, #2a2c33 55%, #16171a 100%);
+            border: 2px solid #0e0f12;
+            border-top: none;
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.35), inset 0 -2px 3px rgba(255, 255, 255, 0.12);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-end;
+            padding: 6px 10px 7px 10px;
+            cursor: pointer;
+            transform: translateY(-42px); /* Başlangıçta takılı */
+            transition: transform 0.34s cubic-bezier(0.22, 1, 0.36, 1);
+        }
+
+        /* Kaset çıkarıldığında aşağı doğru kayar */
+        .cassette-tray.ejected {
+            transform: translateY(0px);
+        }
+
+        .cassette-label-strip {
+            width: 100%;
+            height: 22px;
+            border-radius: 6px;
+            background: linear-gradient(90deg, #ff5a09 0%, #ff823a 100%);
+            border: 1px solid #b83700;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 7px;
+            color: #000000;
+            font-family: var(--font-mono);
+            font-size: 8px;
+            font-weight: 800;
+            letter-spacing: 0.4px;
+        }
+
+        .cassette-grip-lines {
+            width: 64px;
+            height: 4px;
+            margin-top: 5px;
+            border-radius: 999px;
+            background: repeating-linear-gradient(
+                90deg,
+                rgba(255, 255, 255, 0.25) 0px,
+                rgba(255, 255, 255, 0.25) 3px,
+                transparent 3px,
+                transparent 6px
+            );
+        }
+
+        /* İçe Gömülü Ekran Çerçevesi */
+        .screen-frame {
+            position: relative;
+            width: 100%;
+            height: 326px;
+            border-radius: 22px;
+            padding: 6px;
+            background: linear-gradient(180deg, rgba(255, 194, 153, 0.55) 0%, rgba(145, 42, 0, 0.65) 100%);
+            box-shadow:
+                inset 0 2px 6px rgba(80, 20, 0, 0.45),
+                0 1px 2px rgba(255, 255, 255, 0.35);
+        }
+
+        /* SAF SİYAH EKRAN */
+        .screen-surface {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            border-radius: 17px;
+            background: #000000;
+            color: var(--screen-text);
+            border: 1.5px solid #121316;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            padding: 6px 8px 7px 8px;
+            transition: opacity 0.22s ease;
+        }
+
+        .screen-grid-overlay {
+            position: absolute;
+            inset: 0;
+            background-image:
+                linear-gradient(to right, rgba(255, 255, 255, 0.025) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(255, 255, 255, 0.025) 1px, transparent 1px);
+            background-size: 4px 4px;
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        /* KASET ÇIKARILDIĞINDA EKRAN KAPALI DURUMU */
+        .screen-off-cover {
+            position: absolute;
+            inset: 0;
+            z-index: 30;
+            background: #000000;
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            color: #52525b;
+            font-family: var(--font-mono);
+            text-align: center;
+            padding: 16px;
+        }
+
+        .screen-surface.screen-powered-off .screen-off-cover {
+            display: flex;
+        }
+
+        /* YEŞİL ACİL BİLDİRİM POP-UP PENCERESİ */
+        .emergency-popup-overlay {
+            position: absolute;
+            inset: 4px;
+            z-index: 20;
+            border-radius: 15px;
+            background: linear-gradient(165deg, #74d628 0%, var(--alert-shell) 55%, var(--alert-bezel) 100%);
+            border: 2px solid #9eff4a;
+            box-shadow: 0 0 22px rgba(116, 214, 40, 0.55), inset 0 1px 2px rgba(255, 255, 255, 0.45);
+            padding: 5px;
+            display: none;
+            flex-direction: column;
+            animation: popupSlideIn 0.18s ease-out;
+        }
+
+        .emergency-popup-overlay.open {
+            display: flex;
+        }
+
+        @keyframes popupSlideIn {
+            from { transform: translateY(-10px) scale(0.97); opacity: 0; }
+            to { transform: translateY(0) scale(1); opacity: 1; }
+        }
+
+        .emergency-inner-screen {
+            flex: 1;
+            border-radius: 11px;
+            background: linear-gradient(180deg, #161b12 0%, #0b0e09 100%);
+            border: 1.5px solid #2a4712;
+            padding: 6px 8px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            color: var(--alert-glow);
+            font-family: var(--font-mono);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .emergency-status-strip {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 4px;
+            font-size: 9px;
+            padding-bottom: 4px;
+            border-bottom: 1px solid rgba(126, 247, 44, 0.28);
+            color: #8df840;
+        }
+
+        .emergency-mail-box {
+            display: flex;
+            align-items: center;
+            gap: 9px;
+            padding: 6px 4px;
+        }
+
+        .emergency-envelope-icon {
+            position: relative;
+            width: 48px;
+            height: 36px;
+            border: 2.5px solid var(--alert-glow);
+            border-radius: 5px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            color: var(--alert-glow);
+            box-shadow: 0 0 10px rgba(126, 247, 44, 0.25);
+        }
+
+        .emergency-badge-one {
+            position: absolute;
+            top: -7px;
+            right: -7px;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: #0d120a;
+            border: 2px solid var(--alert-glow);
+            color: var(--alert-glow);
+            font-size: 9px;
+            font-weight: 800;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .emergency-meta {
+            min-width: 0;
+            flex: 1;
+            line-height: 1.15;
+        }
+
+        .emergency-title-line {
+            font-size: 13px;
+            font-weight: 800;
+            letter-spacing: 0.4px;
+            color: var(--alert-glow);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .emergency-sub-line {
+            font-size: 10px;
+            font-weight: 700;
+            color: #9cff57;
+            margin-top: 2px;
+        }
+
+        .emergency-body-preview {
+            font-size: 10.5px;
+            font-weight: 700;
+            color: #e4ffd1;
+            background: rgba(126, 247, 44, 0.1);
+            border: 1px solid rgba(126, 247, 44, 0.32);
+            border-radius: 7px;
+            padding: 6px 8px;
+            max-height: 62px;
+            overflow-y: auto;
+            scrollbar-width: none;
+            word-break: break-word;
+        }
+
+        .emergency-body-preview::-webkit-scrollbar {
+            display: none;
+        }
+
+        .emergency-footer-strip {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 6px;
+            padding-top: 5px;
+            border-top: 1px solid rgba(126, 247, 44, 0.28);
+            font-size: 8.5px;
+        }
+
+        .green-action-btn {
+            padding: 3px 8px;
+            border-radius: 6px;
+            border: 1px solid var(--alert-glow);
+            background: rgba(126, 247, 44, 0.16);
+            color: var(--alert-glow);
+            font-weight: 800;
+            cursor: pointer;
+        }
+
+        .green-action-btn.primary {
+            background: var(--alert-glow);
+            color: #12170e;
+        }
+
+        /* Ekran Üst Bar */
+        .top-bar {
+            position: relative;
+            z-index: 4;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 4px;
+            padding-bottom: 4px;
+            border-bottom: 1.5px solid rgba(255, 255, 255, 0.18);
+            font-family: var(--font-mono);
+            font-size: 9.5px;
+        }
+
+        .icon-action-btn {
+            width: 20px;
+            height: 20px;
+            border-radius: 6px;
+            border: 1px solid rgba(255, 255, 255, 0.24);
+            background: rgba(255, 255, 255, 0.1);
+            color: inherit;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 8.5px;
+            cursor: pointer;
+            flex-shrink: 0;
+            transition: transform 0.08s ease, background 0.12s ease;
+        }
+
+        .icon-action-btn:active {
+            transform: scale(0.92);
+        }
+
+        .icon-action-btn.muted {
+            background: rgba(220, 38, 38, 0.85);
+            color: #ffffff;
+            border-color: #991b1b;
+        }
+
+        /* Kanal Sekmeleri */
+        .tabs-row {
+            position: relative;
+            z-index: 4;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            overflow-x: auto;
+            scrollbar-width: none;
+            padding: 4px 0 2px 0;
+        }
+
+        .tabs-row::-webkit-scrollbar {
+            display: none;
+        }
+
+        .channel-tab {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 2px 7px;
+            border-radius: 999px;
+            border: 1px solid rgba(255, 255, 255, 0.22);
+            background: rgba(255, 255, 255, 0.08);
+            color: inherit;
+            font-family: var(--font-mono);
+            font-size: 8.5px;
+            font-weight: 700;
+            white-space: nowrap;
+            cursor: pointer;
+        }
+
+        .channel-tab.active {
+            background: var(--accent-orange);
+            color: #ffffff;
+            border-color: #ff945c;
+        }
+
+        /* Mesaj Akışı — KAYDIRMA ÇUBUĞU TAMAMEN KALDIRILDI */
+        #chat-messages {
+            position: relative;
+            z-index: 4;
+            flex: 1;
+            overflow-y: auto;
+            scrollbar-width: none; /* Firefox */
+            -ms-overflow-style: none; /* IE / Edge */
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+            padding: 4px 2px;
+        }
+
+        #chat-messages::-webkit-scrollbar {
+            display: none; /* Chrome, Safari, Opera */
+            width: 0;
+            height: 0;
+        }
+
+        .bubble-me {
+            background: var(--accent-orange);
+            color: #ffffff;
+            border-radius: 10px 10px 2px 10px;
+            font-weight: 600;
+        }
+
+        .bubble-other {
+            background: rgba(255, 255, 255, 0.14);
+            color: #f4f4f5;
+            border: 1px solid rgba(255, 255, 255, 0.18);
+            border-radius: 10px 10px 10px 2px;
+            font-weight: 500;
+        }
+
+        .bubble-emergency {
+            background: rgba(87, 184, 24, 0.22);
+            color: #8df840;
+            border: 1px solid #7ef72c;
+            border-radius: 10px;
+            font-weight: 700;
+        }
+
+        /* Alt Mesaj Yazma Çubuğu */
+        .composer-bar {
+            position: relative;
+            z-index: 4;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            padding-top: 4px;
+            border-top: 1px solid rgba(255, 255, 255, 0.14);
+        }
+
+        .composer-input {
+            flex: 1;
+            min-width: 0;
+            background: rgba(255, 255, 255, 0.1);
+            color: #ffffff;
+            border: 1px solid rgba(255, 255, 255, 0.22);
+            border-radius: 9px;
+            padding: 4px 7px;
+            font-size: 11px;
+            outline: none;
+            transition: border-color 0.15s ease, background 0.15s ease;
+        }
+
+        .composer-input::placeholder {
+            color: rgba(255, 255, 255, 0.45);
+        }
+
+        /* Acil Mod Aktifken Giriş Kutusu Vurgusu */
+        .composer-input.emergency-armed {
+            border-color: #7ef72c;
+            background: rgba(87, 184, 24, 0.16);
+            color: #d9ffbe;
+        }
+
+        .composer-input.emergency-armed::placeholder {
+            color: rgba(126, 247, 44, 0.75);
+        }
+
+        /* Acil Mesaj Modu Butonu */
+        .emergency-mode-btn {
+            height: 24px;
+            padding: 0 6px;
+            border-radius: 7px;
+            border: 1px solid rgba(126, 247, 44, 0.45);
+            background: rgba(87, 184, 24, 0.15);
+            color: #7ef72c;
+            font-family: var(--font-mono);
+            font-size: 8.5px;
+            font-weight: 800;
+            display: inline-flex;
+            align-items: center;
+            gap: 3px;
+            cursor: pointer;
+            flex-shrink: 0;
+            transition: all 0.12s ease;
+        }
+
+        .emergency-mode-btn.armed {
+            background: #7ef72c;
+            color: #0b1206;
+            border-color: #b7ff85;
+            box-shadow: 0 0 10px rgba(126, 247, 44, 0.55);
+        }
+
+        /* Alt Fiziksel Tuş Alanı */
+        .bottom-controls {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            padding: 2px 4px 0 4px;
+        }
+
+        .confetti-pad {
+            width: 68px;
+            height: 68px;
+            border-radius: 50%;
+            background: linear-gradient(180deg, #b83700 0%, #ff8c42 100%);
+            padding: 5px;
+            box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.35);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            border: none;
+            flex-shrink: 0;
+        }
+
+        .confetti-cap {
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            background: radial-gradient(circle at 35% 30%, #34363e 0%, #1c1d22 75%);
+            border: 1px solid #0f1013;
+            box-shadow: 0 3px 6px rgba(0, 0, 0, 0.35), inset 0 1px 2px rgba(255, 255, 255, 0.18);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: #ff7a2e;
+            gap: 1px;
+            transition: transform 0.08s ease;
+        }
+
+        .confetti-pad:active .confetti-cap {
+            transform: scale(0.93);
+        }
+
+        .dual-pill {
+            flex: 1;
+            max-width: 162px;
+            height: 68px;
+            border-radius: 34px;
+            background: linear-gradient(180deg, #b83700 0%, #ff8c42 100%);
+            padding: 5px;
+            box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.35);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 6px;
+        }
+
+        .round-key {
+            width: 56px;
+            height: 56px;
+            border-radius: 50%;
+            background: radial-gradient(circle at 35% 30%, #32343c 0%, #1a1b20 80%);
+            border: 1px solid #0e0f12;
+            box-shadow: 0 3px 6px rgba(0, 0, 0, 0.35), inset 0 1px 2px rgba(255, 255, 255, 0.16);
+            color: #f4f4f5;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: transform 0.08s ease, background 0.15s ease;
+            flex-shrink: 0;
+        }
+
+        .round-key:active {
+            transform: scale(0.92);
+        }
+
+        .round-key.card-ejected {
+            background: radial-gradient(circle at 35% 30%, #ef4444 0%, #991b1b 85%);
+            color: #ffffff;
+        }
+
+        /* Modallar */
+        .modal-backdrop {
+            position: fixed;
+            inset: 0;
+            background: rgba(15, 16, 20, 0.68);
+            z-index: 60;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 16px;
+        }
+
+        .modal-backdrop.open {
+            display: flex;
+        }
+
+        .modal-card {
+            width: 100%;
+            max-width: 340px;
+            background: #1c1d22;
+            border: 2px solid var(--accent-orange);
+            border-radius: 22px;
+            padding: 15px;
+            color: #f4f4f5;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.45);
+        }
+    </style>
+</head>
+<body>
+
+    <main class="terminal-stage">
+        <div class="device-shell" id="deviceShell">
+            <!-- Sol Kenar Çentiği -->
+            <div class="left-edge-notch"></div>
+
+            <!-- İçe Gömülü Saf Siyah Ekran -->
+            <div class="screen-frame">
+                <div class="screen-surface" id="screenSurface">
+                    <div class="screen-grid-overlay"></div>
+
+                    <!-- KASET ÇIKARILDIĞINDA EKRAN KAPALI GÖRÜNÜMÜ -->
+                    <div class="screen-off-cover" id="screenOffCover">
+                        <i class="fa-solid fa-compact-disc text-2xl text-zinc-700"></i>
+                        <div class="text-[11px] font-bold tracking-wider text-zinc-400">EKRAN KAPALI // KASET ÇIKARILDI</div>
+                        <div class="text-[9px] text-zinc-500">Açmak için sağ alttaki KART tuşuna veya alttaki kasete dokunun</div>
+                    </div>
+
+                    <!-- YEŞİL ACİL BİLDİRİM POP-UP PENCERESİ -->
+                    <div class="emergency-popup-overlay" id="emergencyPopupOverlay" role="alertdialog" aria-live="assertive">
+                        <div class="emergency-inner-screen">
+                            <div>
+                                <!-- Üst Durum Şeridi -->
+                                <div class="emergency-status-strip">
+                                    <span>
+                                        &gt;&gt;&gt; <i class="fa-solid fa-bell"></i> <i class="fa-solid fa-triangle-exclamation"></i> <i class="fa-solid fa-tower-broadcast"></i>
+                                    </span>
+                                    <span id="popupChannelTag">EMERGENCY ALERT</span>
+                                </div>
+
+                                <!-- Mektup / Bildirim Başlık ve Tarih-Saat -->
+                                <div class="emergency-mail-box">
+                                    <div class="emergency-envelope-icon">
+                                        <i class="fa-regular fa-envelope text-xl"></i>
+                                        <span class="emergency-badge-one" id="popupUnreadCount">1</span>
+                                    </div>
+                                    <div class="emergency-meta">
+                                        <div class="emergency-title-line" id="popupTitle">EMERGENCY ALERT</div>
+                                        <div class="emergency-sub-line" id="popupDateLine">21/11/2026</div>
+                                        <div class="emergency-sub-line" id="popupTimeLine">11:19 PM</div>
+                                    </div>
+                                </div>
+
+                                <!-- Acil Mesaj İçeriği -->
+                                <div class="emergency-body-preview selectable-text" id="popupMessageBody">
+                                    Acil durum bildirimi...
+                                </div>
+                            </div>
+
+                            <!-- Alt Butonlar -->
+                            <div class="emergency-footer-strip">
+                                <span id="popupSenderInfo" class="truncate opacity-85">GÖNDEREN: ----</span>
+                                <div class="flex items-center gap-1.5 flex-shrink-0">
+                                    <button type="button" class="green-action-btn primary" onclick="openAlertChannelAndClose()">
+                                        AÇ
+                                    </button>
+                                    <button type="button" class="green-action-btn" onclick="dismissEmergencyPopup()">
+                                        KAPAT
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Üst Durum ve Aksiyon Çubuğu -->
+                    <div class="top-bar">
+                        <div class="flex items-center gap-1.5 min-w-0">
+                            <span id="led-indicator" class="w-2 h-2 rounded-full bg-stone-500 flex-shrink-0" title="Bağlantı Durumu"></span>
+                            <span id="my-identity" onclick="copyMyId()" class="font-bold cursor-pointer truncate" title="ID Kopyala">ID: ----</span>
+                            <span>·</span>
+                            <span id="active-chat-title" class="font-bold truncate">ORTAK ALAN</span>
+                        </div>
+                        <div class="flex items-center gap-1 flex-shrink-0">
+                            <button type="button" id="notif-toggle-btn" onclick="toggleNotifications()" class="icon-action-btn" title="Bildirimleri Aç/Kapat">
+                                <i id="notif-icon" class="fa-solid fa-bell"></i>
+                            </button>
+                            <button type="button" id="btnOpenContacts" onclick="openContactsBookModal()" class="icon-action-btn" title="Kişi Rehberi">
+                                <i class="fa-solid fa-address-book"></i>
+                            </button>
+                            <button type="button" id="btnOpenAddContact" onclick="openAddContactModal()" class="icon-action-btn" title="Kişi Ekle">
+                                <i class="fa-solid fa-user-plus"></i>
+                            </button>
+                            <button type="button" id="btnClearChannel" onclick="clearCurrentChannelMessages()" class="icon-action-btn" title="Kanalı Temizle">
+                                <i class="fa-solid fa-trash"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Kanal Sekmeleri -->
+                    <div id="channel-tabs" class="tabs-row"></div>
+
+                    <!-- Mesaj Akışı (Scrollbar Kaldırıldı, Otomatik En Alta Kayar) -->
+                    <div id="chat-messages"></div>
+
+                    <!-- Alt Mesaj Giriş Çubuğu + Emergency Alert Butonu -->
+                    <form id="chat-form" onsubmit="handleFormSubmit(event)" class="composer-bar">
+                        <input type="file" id="file-input" accept="image/*" class="hidden" onchange="handleFileSelected(event)" />
+                        <button type="button" id="btnEmergencyToggle" onclick="toggleEmergencyMode()" class="emergency-mode-btn" title="Acil Mesaj Modu (Karşı Tarafta Yeşil Emergency Pop-up Açar)">
+                            <i class="fa-solid fa-triangle-exclamation"></i>
+                            <span>ACİL</span>
+                        </button>
+                        <input type="text" id="chat-input" placeholder="Mesaj yaz..." autocomplete="off" class="composer-input" />
+                        <button id="send-btn" type="submit" class="icon-action-btn" style="width:24px;height:24px;background:#ff5a09;color:#ffffff;border-color:#ff8c52;" title="Gönder">
+                            <i class="fa-solid fa-paper-plane"></i>
+                        </button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Alt 3 Tuş: En Sol KONFETİ | Sağındaki `<` FOTOĞRAF | En Sağdaki `□` KART ÇIKAR/TAK -->
+            <div class="bottom-controls">
+                <button type="button" class="confetti-pad" id="btnConfettiKey" onclick="sendConfettiSignal()" title="Konfeti Gönder" aria-label="Konfeti Gönder">
+                    <span class="confetti-cap">
+                        <i class="fa-solid fa-wand-magic-sparkles text-xs"></i>
+                        <span style="font-size:7.5px;font-weight:800;letter-spacing:0.4px;font-family:var(--font-mono);">KONFETİ</span>
+                    </span>
+                </button>
+
+                <div class="dual-pill">
+                    <button type="button" class="round-key" id="btnPhotoKey" onclick="triggerPhotoPicker()" title="Fotoğraf Gönder" aria-label="Fotoğraf Gönder">
+                        <span class="text-sm font-extrabold leading-none">&lt;</span>
+                        <span style="font-size:7px;font-weight:700;font-family:var(--font-mono);opacity:0.85;">FOTO</span>
+                    </button>
+
+                    <button type="button" class="round-key" id="btnCardKey" onclick="toggleCardSlot()" title="Kaseti Çıkar / Tak (Ekranı Kapat / Aç)" aria-label="Kaseti Çıkar veya Tak">
+                        <span class="text-sm font-extrabold leading-none">□</span>
+                        <span id="cardKeyLabel" style="font-size:7px;font-weight:700;font-family:var(--font-mono);opacity:0.85;">KART</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Alt Kaset Yuvası -->
+            <div class="bottom-slot-mouth"></div>
+        </div>
+
+        <!-- ALTTA DURAN KASET (KART BUTONUNA BASINCA ÇIKAR / TAKILIR) -->
+        <div class="cassette-tray" id="cassetteTray" onclick="toggleCardSlot()" title="Kaseti Tak / Çıkar">
+            <div class="cassette-label-strip">
+                <span>PAGER-OS</span>
+                <span id="cassetteStateText">TAKILI</span>
+            </div>
+            <div class="cassette-grip-lines"></div>
+        </div>
+    </main>
+
+    <!-- KİŞİ EKLEME MODALI -->
+    <div id="contact-modal" class="modal-backdrop">
+        <div class="modal-card">
+            <div class="flex items-center justify-between border-b border-white/10 pb-2 mb-3">
+                <div class="flex items-center gap-2 text-xs font-bold font-mono">
+                    <i class="fa-solid fa-user-plus text-[#ff7a2e]"></i>
+                    <span>REHBERE YENİ KİŞİ EKLE</span>
+                </div>
+                <button type="button" onclick="closeAddContactModal()" class="text-zinc-400 hover:text-white">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <div class="flex flex-col gap-2.5 mb-3 text-xs">
+                <input type="text" id="friend-name-input" placeholder="Kişi İsmi / Lakap"
+                       class="bg-black/40 border border-white/15 rounded-xl py-2 px-3 text-white placeholder-zinc-400 focus:outline-none focus:border-[#ff5a09]" />
+                <input type="text" id="friend-id-input" placeholder="4 Haneli ID (Örn: A8F2)" maxlength="4"
+                       class="bg-black/40 border border-white/15 rounded-xl py-2 px-3 font-mono uppercase text-[#ff7a2e] placeholder-zinc-400 focus:outline-none focus:border-[#ff5a09]" />
+            </div>
+
+            <div class="grid grid-cols-3 gap-2 text-xs font-mono">
+                <button type="button" onclick="closeAddContactModal()" class="py-2 rounded-xl bg-white/10 hover:bg-white/15 font-bold">
+                    İptal
+                </button>
+                <button type="button" onclick="copyMyId()" class="py-2 rounded-xl bg-white/10 hover:bg-white/15 font-bold">
+                    <i class="fa-regular fa-copy mr-1"></i>ID
+                </button>
+                <button type="button" id="btnSaveContact" onclick="saveContact()" class="py-2 rounded-xl bg-[#ff5a09] text-white font-extrabold">
+                    Kaydet
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- KİŞİ REHBERİ MODALI -->
+    <div id="contacts-book-modal" class="modal-backdrop">
+        <div class="modal-card max-h-[82vh] flex flex-col">
+            <div class="flex items-center justify-between border-b border-white/10 pb-2 mb-2.5">
+                <span class="font-bold text-xs font-mono flex items-center gap-1.5">
+                    <i class="fa-solid fa-address-book text-[#ff7a2e]"></i> KİŞİ REHBERİ
+                </span>
+                <button type="button" onclick="closeContactsBookModal()" class="text-zinc-400 hover:text-white">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <div class="relative mb-2.5">
+                <i class="fa-solid fa-search absolute left-3 top-2.5 text-[10px] text-zinc-400"></i>
+                <input type="text" id="contact-search-input" oninput="filterContactsList(this.value)" placeholder="İsim veya ID ile ara..."
+                       class="w-full bg-black/40 border border-white/15 rounded-xl py-1.5 pl-8 pr-3 text-xs text-white placeholder-zinc-400 focus:outline-none focus:border-[#ff5a09]" />
+            </div>
+
+            <div id="contacts-list-container" class="flex-1 overflow-y-auto flex flex-col gap-1.5 max-h-[240px] mb-3 pr-1"></div>
+
+            <div class="grid grid-cols-2 gap-2 text-xs font-mono">
+                <button type="button" onclick="closeContactsBookModal(); openAddContactModal();" class="py-2 rounded-xl bg-[#ff5a09] text-white font-extrabold">
+                    <i class="fa-solid fa-user-plus mr-1"></i>Yeni Ekle
+                </button>
+                <button type="button" onclick="closeContactsBookModal()" class="py-2 rounded-xl bg-white/10 hover:bg-white/15 font-bold">
+                    Kapat
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function escapeHtml(str = '') {
+            return String(str)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+
+        function escapeJsSingle(str = '') {
+            return String(str)
+                .replace(/\\/g, '\\\\')
+                .replace(/'/g, "\\'");
+        }
+
+        // --- FIREBASE KURULUMU ---
+        const firebaseConfig = {
+            apiKey: "AIzaSyCbUororrfe0QulrSrxaWONdOhkHaTtIBs",
+            authDomain: "pagertrk.firebaseapp.com",
+            databaseURL: "https://pagertrk-default-rtdb.firebaseio.com",
+            projectId: "pagertrk",
+            storageBucket: "pagertrk.firebasestorage.app",
+            messagingSenderId: "151073272542",
+            appId: "1:151073272542:web:7ef74267da5bf3f128884f",
+            measurementId: "G-3X4R8ST9PM"
+        };
+
+        if (!firebase.apps.length) {
+            firebase.initializeApp(firebaseConfig);
+        }
+        const db = firebase.database();
+
+        // --- UYGULAMA DURUMU ---
+        let inboxInitialized = false;
+        let globalInitialized = false;
+        let emergencyFeedInitialized = false;
+
+        let currentChannel = "GLOBAL_EMERGENCY";
+        let activeListenerRef = null;
+        let soundEnabled = true;
+        let notificationsActive = localStorage.getItem('pager_notif_active') !== 'false';
+        let cardEjected = false; // false = Kaset takılı ve ekran açık, true = Kaset çıkarıldı ve ekran kapalı
+        let emergencyArmed = false;
+        let popupAutoHideTimer = null;
+        let lastPopupChannel = null;
+
+        const renderedMessageIds = new Set();
+        const handledEmergencyIds = new Set();
+        const unreadMap = {};
+
+        let myIdShort = localStorage.getItem('pager_my_id');
+        if (!myIdShort) {
+            myIdShort = Math.random().toString(36).substring(2, 6).toUpperCase();
+            localStorage.setItem('pager_my_id', myIdShort);
+        }
+
+        let contacts = JSON.parse(localStorage.getItem('pager_contacts') || '{}');
+        let audioCtx = null;
+
+        // --- MESAJ LİSTESİNİ HER ZAMAN EN ALTA YASLA ---
+        function scrollToBottom() {
+            const container = document.getElementById('chat-messages');
+            if (!container) return;
+            requestAnimationFrame(() => {
+                container.scrollTop = container.scrollHeight;
+            });
+        }
+
+        // --- ACİL MESAJ MODU (EMERGENCY ALERT) TOGGLE ---
+        function toggleEmergencyMode() {
+            if (cardEjected) return;
+            initAudio();
+            emergencyArmed = !emergencyArmed;
+
+            const btn = document.getElementById('btnEmergencyToggle');
+            const input = document.getElementById('chat-input');
+            const sendBtn = document.getElementById('send-btn');
+
+            if (btn) btn.classList.toggle('armed', emergencyArmed);
+            if (input) {
+                input.classList.toggle('emergency-armed', emergencyArmed);
+                input.placeholder = emergencyArmed ? "ACİL UYARI MESAJI YAZ..." : "Mesaj yaz...";
+                input.focus();
+            }
+            if (sendBtn) {
+                sendBtn.style.background = emergencyArmed ? '#57b818' : '#ff5a09';
+                sendBtn.style.borderColor = emergencyArmed ? '#7ef72c' : '#ff8c52';
+            }
+
+            playKeyBeep(emergencyArmed ? 880 : 440);
+        }
+
+        // --- YEŞİL ACİL BİLDİRİM POP-UP KONTROLÜ ---
+        function triggerEmergencyPopup({ title = 'EMERGENCY ALERT', body = '', sender = 'SYSTEM', channel = null, badgeCount = 1 }) {
+            if (cardEjected) return;
+
+            const overlay = document.getElementById('emergencyPopupOverlay');
+            if (!overlay) return;
+
+            const now = new Date();
+            const dateStr = now.toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' });
+            const timeStr = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+
+            lastPopupChannel = channel;
+
+            document.getElementById('popupUnreadCount').innerText = String(badgeCount);
+            document.getElementById('popupTitle').innerText = title.toUpperCase();
+            document.getElementById('popupDateLine').innerText = dateStr;
+            document.getElementById('popupTimeLine').innerText = timeStr;
+            document.getElementById('popupMessageBody').innerText = body || 'Acil durum mesajı alındı.';
+            document.getElementById('popupSenderInfo').innerText = `GÖNDEREN: ${sender}`;
+            document.getElementById('popupChannelTag').innerText =
+                (!channel || channel === 'GLOBAL_EMERGENCY') ? 'ORTAK ACİL HAT' : 'ÖZEL ACİL HAT';
+
+            overlay.classList.add('open');
+            playPagerAlert();
+
+            if (popupAutoHideTimer) clearTimeout(popupAutoHideTimer);
+            popupAutoHideTimer = setTimeout(() => {
+                dismissEmergencyPopup();
+            }, 8500);
+        }
+
+        function dismissEmergencyPopup() {
+            const overlay = document.getElementById('emergencyPopupOverlay');
+            if (overlay) overlay.classList.remove('open');
+            if (popupAutoHideTimer) {
+                clearTimeout(popupAutoHideTimer);
+                popupAutoHideTimer = null;
+            }
+        }
+
+        function openAlertChannelAndClose() {
+            const targetChannel = lastPopupChannel;
+            dismissEmergencyPopup();
+
+            if (!targetChannel || targetChannel === 'GLOBAL_EMERGENCY') {
+                switchToGlobalChannel();
+                return;
+            }
+
+            const parts = targetChannel.split('_');
+            const otherId = parts.find(p => p && p !== myIdShort) || null;
+            const friendName = (otherId && contacts[otherId]) ? contacts[otherId] : (otherId || 'ÖZEL HAT');
+            switchChannel(targetChannel, friendName, otherId);
+        }
+
+        // --- KASET / KART TAK-ÇIKAR (EKRAN AÇ / KAPAT) ---
+        function toggleCardSlot() {
+            cardEjected = !cardEjected;
+
+            const surface = document.getElementById('screenSurface');
+            const cardBtn = document.getElementById('btnCardKey');
+            const cardLabel = document.getElementById('cardKeyLabel');
+            const cassetteTray = document.getElementById('cassetteTray');
+            const cassetteText = document.getElementById('cassetteStateText');
+
+            if (cardEjected) {
+                // Kart çıkarıldı -> Kaset dışarı çıkar ve ekran kapanır
+                dismissEmergencyPopup();
+                if (surface) surface.classList.add('screen-powered-off');
+                if (cardBtn) cardBtn.classList.add('card-ejected');
+                if (cardLabel) cardLabel.innerText = 'TAK';
+                if (cassetteTray) cassetteTray.classList.add('ejected');
+                if (cassetteText) cassetteText.innerText = 'DIŞARIDA';
+                playKeyBeep(240);
+            } else {
+                // Kart takıldı -> Kaset cihaza girer ve ekran açılır
+                if (surface) surface.classList.remove('screen-powered-off');
+                if (cardBtn) cardBtn.classList.remove('card-ejected');
+                if (cardLabel) cardLabel.innerText = 'KART';
+                if (cassetteTray) cassetteTray.classList.remove('ejected');
+                if (cassetteText) cassetteText.innerText = 'TAKILI';
+                playKeyBeep(560);
+                scrollToBottom();
+            }
+        }
+
+        function triggerPhotoPicker() {
+            if (cardEjected) return;
+            document.getElementById('file-input').click();
+        }
+
+        // --- SES & KONFETİ ---
+        function initAudio() {
+            if (!audioCtx) {
+                const AudioContext = window.AudioContext || window.webkitAudioContext;
+                if (AudioContext) audioCtx = new AudioContext();
+            }
+            if (audioCtx && audioCtx.state === 'suspended') {
+                audioCtx.resume().catch(() => {});
+            }
+        }
+
+        function playKeyBeep(freq = 580) {
+            if (!soundEnabled) return;
+            initAudio();
+            if (!audioCtx) return;
+            try {
+                const now = audioCtx.currentTime;
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(freq, now);
+                gain.gain.setValueAtTime(0.08, now);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.06);
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.start(now);
+                osc.stop(now + 0.06);
+            } catch (e) {}
+        }
+
+        function triggerUltraHDConfetti() {
+            if (typeof confetti === 'function') {
+                confetti({
+                    particleCount: 120,
+                    spread: 80,
+                    origin: { y: 0.6 },
+                    colors: ['#ff5a09', '#7ef72c', '#FFD700', '#00E5FF', '#FF007F']
+                });
+            }
+        }
+
+        function playMeowSound() {
+            initAudio();
+            if (!audioCtx) return;
+            try {
+                const now = audioCtx.currentTime;
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(450, now);
+                osc.frequency.exponentialRampToValueAtTime(850, now + 0.15);
+                osc.frequency.exponentialRampToValueAtTime(300, now + 0.45);
+                gain.gain.setValueAtTime(0.01, now);
+                gain.gain.linearRampToValueAtTime(0.2, now + 0.1);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.45);
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.start(now);
+                osc.stop(now + 0.45);
+            } catch (e) {}
+        }
+
+        function playPagerAlert() {
+            if (!soundEnabled) return;
+            initAudio();
+            if (!audioCtx) return;
+            try {
+                const now = audioCtx.currentTime;
+                [0, 0.12, 0.24].forEach(offset => {
+                    const osc = audioCtx.createOscillator();
+                    const gain = audioCtx.createGain();
+                    osc.type = 'square';
+                    osc.frequency.setValueAtTime(2000, now + offset);
+                    gain.gain.setValueAtTime(0.06, now + offset);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + offset + 0.06);
+                    osc.connect(gain);
+                    gain.connect(audioCtx.destination);
+                    osc.start(now + offset);
+                    osc.stop(now + offset + 0.06);
+                });
+            } catch (e) {}
+        }
+
+        // --- BAĞLANTI DURUMU ---
+        db.ref('.info/connected').on('value', (snap) => {
+            const led = document.getElementById('led-indicator');
+            if (!led) return;
+            if (snap.val() === true) {
+                led.className = "w-2 h-2 rounded-full bg-emerald-400 flex-shrink-0";
+                led.title = "Çevrimiçi (Bağlı)";
+            } else {
+                led.className = "w-2 h-2 rounded-full bg-red-500 flex-shrink-0";
+                led.title = "Çevrimdışı";
+            }
+        });
+
+        // --- BİLDİRİMLER & KOPYALAMA & TEMİZLEME ---
+        function toggleNotifications() {
+            initAudio();
+            if (!('Notification' in window)) {
+                notificationsActive = !notificationsActive;
+                soundEnabled = notificationsActive;
+                localStorage.setItem('pager_notif_active', String(notificationsActive));
+                updateNotificationButtonUI();
+                return;
+            }
+
+            if (Notification.permission === 'granted') {
+                notificationsActive = !notificationsActive;
+                soundEnabled = notificationsActive;
+                localStorage.setItem('pager_notif_active', String(notificationsActive));
+                updateNotificationButtonUI();
+            } else {
+                Notification.requestPermission().then(permission => {
+                    notificationsActive = (permission === 'granted');
+                    soundEnabled = notificationsActive;
+                    localStorage.setItem('pager_notif_active', String(notificationsActive));
+                    updateNotificationButtonUI();
+                }).catch(() => {});
+            }
+        }
+
+        function updateNotificationButtonUI() {
+            const btn = document.getElementById('notif-toggle-btn');
+            const icon = document.getElementById('notif-icon');
+            if (!icon || !btn) return;
+            const isOn = notificationsActive && soundEnabled;
+            icon.className = isOn ? "fa-solid fa-bell" : "fa-solid fa-bell-slash";
+            btn.classList.toggle('muted', !isOn);
+        }
+
+        function triggerSystemNotification(title, bodyText) {
+            if (!notificationsActive) return;
+            if ('Notification' in window && Notification.permission === 'granted') {
+                try {
+                    new Notification(title, {
+                        body: bodyText,
+                        icon: 'https://cdn-icons-png.flaticon.com/512/3602/3602145.png'
+                    });
+                } catch (e) {}
+            }
+        }
+
+        function fallbackCopy(text) {
+            const ta = document.createElement('textarea');
+            ta.value = text;
+            ta.style.position = 'fixed';
+            ta.style.opacity = '0';
+            document.body.appendChild(ta);
+            ta.focus();
+            ta.select();
+            try { document.execCommand('copy'); } catch (e) {}
+            document.body.removeChild(ta);
+        }
+
+        function copyMyId() {
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(myIdShort)
+                    .then(() => alert(`Kendi ID'niz kopyalandı: ${myIdShort}`))
+                    .catch(() => {
+                        fallbackCopy(myIdShort);
+                        alert(`Kendi ID'niz kopyalandı: ${myIdShort}`);
+                    });
+            } else {
+                fallbackCopy(myIdShort);
+                alert(`Kendi ID'niz kopyalandı: ${myIdShort}`);
+            }
+        }
+
+        function clearCurrentChannelMessages() {
+            initAudio();
+            const channelNameDisplay = currentChannel === "GLOBAL_EMERGENCY"
+                ? "ORTAK ALAN"
+                : (window.activeTargetFriendName ? `ÖZEL: ${window.activeTargetFriendName}` : "Bu Özel Hat");
+
+            if (confirm(`${channelNameDisplay} içerisindeki TÜM mesajlar silinecektir. Onaylıyor musunuz?`)) {
+                const clearPath = currentChannel === "GLOBAL_EMERGENCY"
+                    ? "messages_GLOBAL_EMERGENCY"
+                    : `messages_dm/${currentChannel}`;
+                db.ref(clearPath).remove().then(() => {
+                    document.getElementById('chat-messages').innerHTML = '';
+                    renderedMessageIds.clear();
+                });
+            }
+        }
+
+        // --- ŞİFRELEME / ÇÖZME ---
+        function encryptText(text, key) {
+            let result = '';
+            for (let i = 0; i < text.length; i++) {
+                result += String.fromCharCode(text.charCodeAt(i) ^ key.charCodeAt(i % key.length));
+            }
+            return btoa(unescape(encodeURIComponent(result)));
+        }
+
+        function decryptText(cipherText, key) {
+            try {
+                let decoded = decodeURIComponent(escape(atob(cipherText)));
+                let result = '';
+                for (let i = 0; i < decoded.length; i++) {
+                    result += String.fromCharCode(decoded.charCodeAt(i) ^ key.charCodeAt(i % key.length));
+                }
+                return result;
+            } catch (e) {
+                return "[Şifreli Veri]";
+            }
+        }
+
+        // --- KONFETİ SİNYALİ & RESİM GÖNDERİMİ ---
+        function sendConfettiSignal() {
+            if (cardEjected) return;
+            playMeowSound();
+            triggerUltraHDConfetti();
+
+            const signalObj = {
+                id: 'confetti_' + Date.now(),
+                type: 'confetti_signal',
+                sender: myIdShort,
+                time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+            };
+
+            const dbPath = currentChannel === "GLOBAL_EMERGENCY"
+                ? "messages_GLOBAL_EMERGENCY"
+                : `messages_dm/${currentChannel}`;
+            db.ref(dbPath).push(signalObj);
+
+            if (currentChannel !== "GLOBAL_EMERGENCY" && window.activeTargetFriend) {
+                db.ref(`inbox/${window.activeTargetFriend}`).push({
+                    from: myIdShort,
+                    channel: currentChannel,
+                    preview: '🎉 [Konfeti Sinyali]',
+                    time: signalObj.time
+                });
+            }
+        }
+
+        function handleFileSelected(event) {
+            const file = event.target.files && event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(uploadEvent) {
+                const img = new Image();
+                img.onload = function() {
+                    const canvas = document.createElement('canvas');
+                    let width = img.width;
+                    let height = img.height;
+                    const maxDim = 800;
+
+                    if (width > height && width > maxDim) {
+                        height *= maxDim / width;
+                        width = maxDim;
+                    } else if (height > maxDim) {
+                        width *= maxDim / height;
+                        height = maxDim;
+                    }
+
+                    canvas.width = width;
+                    canvas.height = height;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0, width, height);
+
+                    const compressedBase64 = canvas.toDataURL('image/jpeg', 0.7);
+                    sendPayload({
+                        type: 'image',
+                        content: compressedBase64,
+                        previewText: '[Fotoğraf]',
+                        isEmergency: emergencyArmed
+                    });
+                };
+                img.src = uploadEvent.target.result;
+            };
+            reader.readAsDataURL(file);
+            event.target.value = '';
+        }
+
+        // --- REHBER & KİŞİ EKLEME MODALLARI ---
+        function openAddContactModal() {
+            initAudio();
+            const modal = document.getElementById('contact-modal');
+            modal.classList.add('open');
+            setTimeout(() => {
+                const nameInp = document.getElementById('friend-name-input');
+                if (nameInp) nameInp.focus();
+            }, 40);
+        }
+
+        function closeAddContactModal() {
+            document.getElementById('contact-modal').classList.remove('open');
+        }
+
+        function openContactsBookModal() {
+            initAudio();
+            document.getElementById('contacts-book-modal').classList.add('open');
+            const searchInp = document.getElementById('contact-search-input');
+            if (searchInp) searchInp.value = '';
+            renderContactsList();
+        }
+
+        function closeContactsBookModal() {
+            document.getElementById('contacts-book-modal').classList.remove('open');
+        }
+
+        function saveContact() {
+            const idInput = document.getElementById('friend-id-input').value.trim().toUpperCase();
+            const nameInput = document.getElementById('friend-name-input').value.trim() || idInput;
+
+            if (idInput.length !== 4) {
+                alert("Lütfen 4 haneli geçerli bir ID girin.");
+                return;
+            }
+            if (idInput === myIdShort) {
+                alert("Kendinizi rehbere ekleyemezsiniz.");
+                return;
+            }
+
+            contacts[idInput] = nameInput;
+            localStorage.setItem('pager_contacts', JSON.stringify(contacts));
+
+            closeAddContactModal();
+            document.getElementById('friend-id-input').value = '';
+            document.getElementById('friend-name-input').value = '';
+
+            renderContactTabs();
+            switchChannel(`${getDmKey(myIdShort, idInput)}`, nameInput, idInput);
+        }
+
+        function deleteContact(friendId, event) {
+            if (event) event.stopPropagation();
+            if (confirm(`"${contacts[friendId]}" kişisini rehberden silmek istediğinize emin misiniz?`)) {
+                delete contacts[friendId];
+                localStorage.setItem('pager_contacts', JSON.stringify(contacts));
+                renderContactTabs();
+                renderContactsList(document.getElementById('contact-search-input').value || '');
+
+                if (currentChannel.includes(friendId)) {
+                    switchToGlobalChannel();
+                }
+            }
+        }
+
+        function renderContactsList(filterQuery = '') {
+            const container = document.getElementById('contacts-list-container');
+            const entries = Object.entries(contacts);
+            if (entries.length === 0) {
+                container.innerHTML = `<div class="text-center text-zinc-400 py-5 text-xs">Rehberinizde henüz kayıtlı kişi yok.</div>`;
+                return;
+            }
+
+            const query = filterQuery.toLowerCase();
+            let html = '';
+            let count = 0;
+
+            for (const [friendId, friendName] of entries) {
+                if (query && !friendName.toLowerCase().includes(query) && !friendId.toLowerCase().includes(query)) {
+                    continue;
+                }
+                count++;
+                const dmKey = getDmKey(myIdShort, friendId);
+                const safeNameAttr = escapeJsSingle(friendName);
+                const safeIdAttr = escapeJsSingle(friendId);
+                const safeDmKeyAttr = escapeJsSingle(dmKey);
+
+                html += `
+                    <div onclick="closeContactsBookModal(); switchChannel('${safeDmKeyAttr}', '${safeNameAttr}', '${safeIdAttr}')"
+                         class="flex items-center justify-between p-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 cursor-pointer transition">
+                        <div class="flex items-center gap-2 min-w-0">
+                            <div class="w-7 h-7 rounded-lg bg-[#ff5a09] text-white flex items-center justify-center font-bold text-xs flex-shrink-0">
+                                <i class="fa-solid fa-user"></i>
+                            </div>
+                            <div class="flex flex-col min-w-0">
+                                <span class="font-bold text-xs text-white truncate">${escapeHtml(friendName)}</span>
+                                <span class="font-mono text-[10px] text-zinc-400">ID: ${escapeHtml(friendId)}</span>
+                            </div>
+                        </div>
+                        <button type="button" onclick="deleteContact('${safeIdAttr}', event)" title="Kişiyi Sil" class="p-1.5 rounded-lg text-zinc-400 hover:text-red-400 flex-shrink-0">
+                            <i class="fa-solid fa-trash text-xs"></i>
+                        </button>
+                    </div>
+                `;
+            }
+
+            if (count === 0) {
+                html = `<div class="text-center text-zinc-400 py-5 text-xs">Aradığınız kritere uygun kişi bulunamadı.</div>`;
+            }
+            container.innerHTML = html;
+        }
+
+        function filterContactsList(val) {
+            renderContactsList(val);
+        }
+
+        function getDmKey(id1, id2) {
+            return [id1, id2].sort().join('_');
+        }
+
+        // --- KANAL SEKMELERİ & GEÇİŞLERİ ---
+        function renderContactTabs() {
+            const container = document.getElementById('channel-tabs');
+            let html = '';
+
+            const globalUnread = unreadMap['GLOBAL_EMERGENCY'] || 0;
+            const globalActive = currentChannel === 'GLOBAL_EMERGENCY';
+            html += `
+                <button type="button" onclick="switchToGlobalChannel()" class="channel-tab ${globalActive ? 'active' : ''}">
+                    <i class="fa-solid fa-tower-broadcast"></i>
+                    <span>HERKES</span>
+                    ${globalUnread > 0 ? `<span class="bg-lime-400 text-black text-[8px] px-1 rounded-full">${globalUnread}</span>` : ''}
+                </button>
+            `;
+
+            for (const [friendId, friendName] of Object.entries(contacts)) {
+                const channelKey = getDmKey(myIdShort, friendId);
+                const isActive = currentChannel === channelKey;
+                const unreadCount = unreadMap[channelKey] || 0;
+                const safeNameAttr = escapeJsSingle(friendName);
+                const safeIdAttr = escapeJsSingle(friendId);
+                const safeKeyAttr = escapeJsSingle(channelKey);
+
+                html += `
+                    <button type="button" onclick="switchChannel('${safeKeyAttr}', '${safeNameAttr}', '${safeIdAttr}')" class="channel-tab ${isActive ? 'active' : ''}">
+                        <i class="fa-solid fa-user"></i>
+                        <span>${escapeHtml(friendName)}</span>
+                        ${unreadCount > 0 ? `<span class="bg-lime-400 text-black text-[8px] px-1 rounded-full">${unreadCount}</span>` : ''}
+                    </button>
+                `;
+            }
+
+            container.innerHTML = html;
+        }
+
+        function switchToGlobalChannel() {
+            initAudio();
+            currentChannel = "GLOBAL_EMERGENCY";
+            window.activeTargetFriend = null;
+            window.activeTargetFriendName = null;
+            unreadMap['GLOBAL_EMERGENCY'] = 0;
+            renderedMessageIds.clear();
+            document.getElementById('active-chat-title').innerText = "ORTAK ALAN";
+            renderContactTabs();
+            switchChannelListener("messages_GLOBAL_EMERGENCY", "GLOBAL_EMERGENCY");
+        }
+
+        function switchChannel(channelKey, titleName, friendId) {
+            initAudio();
+            currentChannel = channelKey;
+            window.activeTargetFriend = friendId;
+            window.activeTargetFriendName = titleName;
+            unreadMap[channelKey] = 0;
+            renderedMessageIds.clear();
+            document.getElementById('active-chat-title').innerText = titleName ? `ÖZEL: ${titleName}` : "ÖZEL HAT";
+            renderContactTabs();
+            switchChannelListener(`messages_dm/${channelKey}`, channelKey);
+        }
+
+        function switchChannelListener(firebasePath, encryptionKey) {
+            document.getElementById('chat-messages').innerHTML = '';
+            if (activeListenerRef) activeListenerRef.off();
+
+            const channelOpenTime = Date.now();
+            activeListenerRef = db.ref(firebasePath);
+
+            activeListenerRef.on('child_added', (snapshot) => {
+                const msg = snapshot.val();
+                if (!msg || renderedMessageIds.has(msg.id)) return;
+
+                renderedMessageIds.add(msg.id);
+
+                if (msg.type === 'confetti_signal') {
+                    const msgTimestamp = parseInt(msg.id?.replace('confetti_', '')) || 0;
+                    if (msg.sender !== myIdShort && msgTimestamp > channelOpenTime) {
+                        playPagerAlert();
+                        playMeowSound();
+                        triggerUltraHDConfetti();
+                        triggerSystemNotification(`PAGER // ${msg.sender}`, "🎉 Konfeti Patlatıldı!");
+                    }
+                    return;
+                }
+
+                renderMessage(msg, encryptionKey);
+
+                const msgTimestamp = parseInt(msg.id?.replace('msg_', '')) || 0;
+                if (msg.sender !== myIdShort && msgTimestamp > channelOpenTime) {
+                    const decryptedText = msg.type === 'image' ? '[Fotoğraf Alındı]' : decryptText(msg.encryptedText, encryptionKey);
+                    if (msg.isEmergency) {
+                        triggerEmergencyPopup({
+                            title: 'EMERGENCY ALERT',
+                            body: decryptedText,
+                            sender: msg.sender,
+                            channel: encryptionKey,
+                            badgeCount: 1
+                        });
+                    } else {
+                        playPagerAlert();
+                    }
+                    triggerSystemNotification(
+                        msg.isEmergency ? `🚨 ACİL // ${msg.sender}` : `PAGER // ${msg.sender}`,
+                        decryptedText
+                    );
+                }
+            });
+        }
+
+        // --- MESAJ GÖNDERİMİ & ÇİZİMİ ---
+        function handleFormSubmit(e) {
+            e.preventDefault();
+            if (cardEjected) return;
+            initAudio();
+            const input = document.getElementById('chat-input');
+            const text = input.value.trim();
+            if (!text) return;
+
+            const isEmergency = emergencyArmed;
+            playKeyBeep(isEmergency ? 920 : 720);
+
+            sendPayload({
+                type: 'text',
+                content: text,
+                previewText: text,
+                isEmergency
+            });
+
+            input.value = '';
+
+            // Gönderim sonrası acil modu otomatik sıfırla
+            if (emergencyArmed) {
+                toggleEmergencyMode();
+            }
+        }
+
+        function sendPayload(payloadObj) {
+            const encrypted = (payloadObj.type === 'text') ? encryptText(payloadObj.content, currentChannel) : payloadObj.content;
+            const nowTime = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            const msgId = 'msg_' + Date.now();
+
+            const msgObj = {
+                id: msgId,
+                type: payloadObj.type,
+                sender: myIdShort,
+                encryptedText: encrypted,
+                isEmergency: Boolean(payloadObj.isEmergency),
+                time: nowTime
+            };
+
+            if (!renderedMessageIds.has(msgObj.id)) {
+                renderedMessageIds.add(msgObj.id);
+                renderMessage(msgObj, currentChannel);
+            }
+
+            const dbPath = currentChannel === "GLOBAL_EMERGENCY"
+                ? "messages_GLOBAL_EMERGENCY"
+                : `messages_dm/${currentChannel}`;
+            db.ref(dbPath).push(msgObj);
+
+            // Karşı taraf hangi kanalda olursa olsun anlık yeşil Emergency Pop-up açması için yayın yap
+            if (payloadObj.isEmergency) {
+                const emergencyEvent = {
+                    alertId: 'emg_' + Date.now() + '_' + myIdShort,
+                    from: myIdShort,
+                    target: currentChannel === "GLOBAL_EMERGENCY" ? "ALL" : (window.activeTargetFriend || "ALL"),
+                    channel: currentChannel,
+                    message: payloadObj.previewText,
+                    time: nowTime
+                };
+                db.ref('emergency_broadcasts').push(emergencyEvent);
+            }
+
+            if (currentChannel !== "GLOBAL_EMERGENCY" && window.activeTargetFriend) {
+                db.ref(`inbox/${window.activeTargetFriend}`).push({
+                    from: myIdShort,
+                    channel: currentChannel,
+                    preview: payloadObj.isEmergency
+                        ? `🚨 [ACİL] ${payloadObj.previewText.substring(0, 40)}`
+                        : payloadObj.previewText.substring(0, 30),
+                    isEmergency: Boolean(payloadObj.isEmergency),
+                    time: nowTime
+                });
+            }
+        }
+
+        function renderMessage(m, encryptionKey) {
+            const container = document.getElementById('chat-messages');
+            const isMe = m.sender === myIdShort;
+
+            let contentHtml = '';
+            if (m.type === 'image') {
+                const safeSrc = escapeHtml(m.encryptedText);
+                contentHtml = `<img src="${safeSrc}" onload="scrollToBottom()" class="rounded-lg max-w-full h-auto max-h-32 object-cover border border-white/20 cursor-pointer" onclick="window.open(this.src, '_blank', 'noopener,noreferrer')" />`;
+            } else {
+                const plain = decryptText(m.encryptedText, encryptionKey);
+                const prefix = m.isEmergency ? '<span class="mr-1 font-mono text-[9px] uppercase">[ACİL]</span>' : '';
+                contentHtml = prefix + escapeHtml(plain);
+            }
+
+            const bubbleClass = m.isEmergency
+                ? 'bubble-emergency'
+                : (isMe ? 'bubble-me' : 'bubble-other');
+
+            const msgEl = document.createElement('div');
+            msgEl.className = `flex flex-col gap-0.5 max-w-[85%] ${isMe ? 'self-end items-end' : 'self-start items-start'}`;
+            msgEl.innerHTML = `
+                <div class="text-[8px] opacity-75 px-1 font-mono"><b>${escapeHtml(m.sender)}</b> · ${escapeHtml(m.time || '')}</div>
+                <div class="px-2.5 py-1 text-[10.5px] leading-snug selectable-text ${bubbleClass}">
+                    ${contentHtml}
+                </div>
+            `;
+            container.appendChild(msgEl);
+            scrollToBottom();
+        }
+
+        // --- ARKA PLAN ÇAĞRI & ANLIK EMERGENCY ALERT DİNLEYİCİSİ ---
+        function initBackgroundPager() {
+            // 1. Küresel & Hedefli Anlık Emergency Alert Dinleyicisi (Karşı taraf hangi kanalda olursa olsun tetiklenir)
+            db.ref('emergency_broadcasts').limitToLast(15).on('child_added', (snapshot) => {
+                const alertData = snapshot.val();
+                if (!alertData || alertData.from === myIdShort) return;
+                if (!emergencyFeedInitialized) return;
+                if (alertData.alertId && handledEmergencyIds.has(alertData.alertId)) return;
+                if (alertData.alertId) handledEmergencyIds.add(alertData.alertId);
+
+                const isForMe = (alertData.target === 'ALL' || alertData.target === myIdShort);
+                if (!isForMe) return;
+
+                if (alertData.channel && alertData.channel !== currentChannel) {
+                    unreadMap[alertData.channel] = (unreadMap[alertData.channel] || 0) + 1;
+                    renderContactTabs();
+                }
+
+                triggerEmergencyPopup({
+                    title: 'EMERGENCY ALERT',
+                    body: alertData.message || 'Acil durum bildirimi!',
+                    sender: alertData.from,
+                    channel: alertData.channel || 'GLOBAL_EMERGENCY',
+                    badgeCount: (alertData.channel && unreadMap[alertData.channel]) ? unreadMap[alertData.channel] : 1
+                });
+
+                triggerSystemNotification(`🚨 EMERGENCY ALERT [${alertData.from}]`, alertData.message || 'Acil durum bildirimi!');
+            });
+
+            // 2. Özel Mesaj Inbox Dinleyicisi
+            db.ref(`inbox/${myIdShort}`).on('child_added', (snapshot) => {
+                const data = snapshot.val();
+                if (!data || data.from === myIdShort) return;
+
+                if (data.channel && data.channel !== currentChannel) {
+                    unreadMap[data.channel] = (unreadMap[data.channel] || 0) + 1;
+                    renderContactTabs();
+                }
+
+                if (inboxInitialized) {
+                    if (data.isEmergency) {
+                        triggerEmergencyPopup({
+                            title: 'EMERGENCY ALERT',
+                            body: data.preview || 'Acil özel mesaj alındı.',
+                            sender: data.from,
+                            channel: data.channel || null,
+                            badgeCount: data.channel ? (unreadMap[data.channel] || 1) : 1
+                        });
+                    } else {
+                        playPagerAlert();
+                    }
+                    triggerSystemNotification(`YENİ ÇAĞRI [${data.from}]`, data.preview || "Özel mesaj alındı.");
+                }
+            });
+
+            // 3. Ortak Kanal Okunmamış Sayacı
+            db.ref('messages_GLOBAL_EMERGENCY').on('child_added', (snapshot) => {
+                const msg = snapshot.val();
+                if (!msg || msg.sender === myIdShort) return;
+
+                if (globalInitialized && currentChannel !== 'GLOBAL_EMERGENCY') {
+                    unreadMap['GLOBAL_EMERGENCY'] = (unreadMap['GLOBAL_EMERGENCY'] || 0) + 1;
+                    renderContactTabs();
+                    if (!msg.isEmergency) playPagerAlert();
+                }
+            });
+        }
+
+        // Modal Dışına Tıklama & ESC
+        document.getElementById('contact-modal').addEventListener('click', (e) => {
+            if (e.target.id === 'contact-modal') closeAddContactModal();
+        });
+
+        document.getElementById('contacts-book-modal').addEventListener('click', (e) => {
+            if (e.target.id === 'contacts-book-modal') closeContactsBookModal();
+        });
+
+        ['friend-name-input', 'friend-id-input'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) {
+                el.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
+                        saveContact();
+                    }
+                });
+            }
+        });
+
+        window.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                dismissEmergencyPopup();
+                closeAddContactModal();
+                closeContactsBookModal();
+            }
+        });
+
+        // --- BAŞLANGIÇ KURULUMU ---
+        function bootstrapTerminal() {
+            updateNotificationButtonUI();
+            document.getElementById('my-identity').innerText = `ID: ${myIdShort}`;
+
+            db.ref(`inbox/${myIdShort}`).once('value', () => {
+                inboxInitialized = true;
+            });
+            db.ref('messages_GLOBAL_EMERGENCY').once('value', () => {
+                globalInitialized = true;
+            });
+            db.ref('emergency_broadcasts').limitToLast(15).once('value', () => {
+                emergencyFeedInitialized = true;
+            });
+
+            if ('serviceWorker' in navigator) {
+                navigator.serviceWorker.register('./sw.js')
+                    .then(reg => console.log('Service Worker Kaydedildi:', reg.scope))
+                    .catch(() => console.info('sw.js bulunamadı veya yerel ortamda atlandı.'));
+            }
+
+            if ('Notification' in window && Notification.permission === 'default' && notificationsActive) {
+                Notification.requestPermission().then(perm => {
+                    notificationsActive = (perm === 'granted');
+                    soundEnabled = notificationsActive;
+                    localStorage.setItem('pager_notif_active', String(notificationsActive));
+                    updateNotificationButtonUI();
+                }).catch(() => {});
+            }
+
+            document.body.addEventListener('click', () => initAudio(), { once: true });
+
+            initBackgroundPager();
+            renderContactTabs();
+            switchToGlobalChannel();
+        }
+
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', bootstrapTerminal);
+        } else {
+            bootstrapTerminal();
+        }
+    </script>
+</body>
+</html>

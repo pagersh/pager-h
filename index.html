@@ -1,0 +1,3330 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+
+    <!-- Apple PWA ve Safari Tam Ekran Meta Etiketleri -->
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="HAMZACHAT Q-OS">
+    <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/3602/3602145.png">
+
+    <title>HAMZACHAT // QUANTUM PAGER-OS v4.2</title>
+    <link rel="manifest" href="./manifest.json">
+
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+
+    <!-- Canvas Confetti CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+
+    <!-- Tailwind CSS & FontAwesome & Fonts -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700;800&display=swap" rel="stylesheet">
+
+    <style>
+        :root {
+            --bg-canvas: #cfd6dc;
+            --shell-main: #ff5a09;
+            --shell-highlight: #ff7a2e;
+            --shell-shadow: #d94300;
+            --shell-border: #b83700;
+            --accent-orange: #ff5a09;
+            --quantum-cyan: #00f0ff;
+            --quantum-violet: #a855f7;
+
+            --alert-shell: #57b818;
+            --alert-bezel: #388809;
+            --alert-glow: #7ef72c;
+
+            --screen-bg: #000000;
+            --screen-text: #f4f4f5;
+            --font-sans: 'Plus Jakarta Sans', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            --font-mono: 'JetBrains Mono', monospace;
+            --live-vh: 100dvh;
+        }
+
+        body.cartridge-ghost {
+            --shell-main: #581c87;
+            --shell-highlight: #7e22ce;
+            --shell-shadow: #3b0764;
+            --shell-border: #2e1065;
+            --accent-orange: #a855f7;
+        }
+
+        * {
+            box-sizing: border-box;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        input, textarea, .selectable-text {
+            -webkit-user-select: text !important;
+            user-select: text !important;
+        }
+
+        html, body {
+            position: fixed;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            overscroll-behavior: none;
+            touch-action: manipulation;
+            background-color: var(--bg-canvas);
+            background-image: radial-gradient(circle at 50% 25%, rgba(255, 255, 255, 0.6) 0%, rgba(168, 179, 189, 0.78) 100%);
+            font-family: var(--font-sans);
+            color: #18181b;
+            transition: background 0.3s ease;
+        }
+
+        .app-viewport {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: var(--live-vh);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: max(6px, env(safe-area-inset-top)) 8px 6px 8px;
+            overflow: hidden;
+        }
+
+        .app-viewport.kb-open {
+            justify-content: flex-end;
+            padding-top: max(4px, env(safe-area-inset-top));
+            padding-bottom: 4px;
+        }
+
+        .terminal-stage {
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+            max-width: 416px;
+            max-height: 100%;
+        }
+
+        .device-shell {
+            position: relative;
+            z-index: 3;
+            width: 100%;
+            max-width: 408px;
+            max-height: 100%;
+            border-radius: 32px;
+            background: linear-gradient(160deg, var(--shell-highlight) 0%, var(--shell-main) 52%, var(--shell-shadow) 100%);
+            border: 2px solid var(--shell-border);
+            box-shadow:
+                0 16px 34px rgba(24, 24, 27, 0.28),
+                inset 0 2px 3px rgba(255, 255, 255, 0.45),
+                inset 0 -3px 6px rgba(0, 0, 0, 0.45);
+            padding: 12px 13px 12px 13px;
+            display: flex;
+            flex-direction: column;
+            gap: 9px;
+            min-height: 0;
+            transition: background 0.35s ease, border-color 0.35s ease;
+        }
+
+        .app-viewport.kb-open .device-shell {
+            border-radius: 22px;
+            padding: 8px 11px 8px 11px;
+            gap: 6px;
+        }
+
+        .left-edge-notch {
+            position: absolute;
+            left: -6px;
+            top: 78px;
+            width: 6px;
+            height: 54px;
+            border-radius: 4px 0 0 4px;
+            background: #232429;
+            box-shadow: inset 1px 1px 2px rgba(255, 255, 255, 0.15);
+        }
+
+        .bottom-slot-mouth {
+            position: absolute;
+            bottom: -4px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 194px;
+            height: 6px;
+            border-radius: 999px;
+            background: #141518;
+            border: 1px solid rgba(0,0,0,0.6);
+            box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.85);
+            z-index: 4;
+        }
+
+        .app-viewport.kb-open .bottom-slot-mouth,
+        .app-viewport.kb-open .cassette-tray {
+            display: none;
+        }
+
+        .cassette-tray {
+            position: relative;
+            z-index: 2;
+            width: 184px;
+            height: 44px;
+            margin-top: -10px;
+            border-radius: 0 0 14px 14px;
+            background: linear-gradient(180deg, #1b1c20 0%, #2a2c33 55%, #16171a 100%);
+            border: 2px solid #0e0f12;
+            border-top: none;
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.32), inset 0 -2px 3px rgba(255, 255, 255, 0.12);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-end;
+            padding: 5px 9px 6px 9px;
+            cursor: pointer;
+            transform: translateY(-34px);
+            transition: transform 0.25s cubic-bezier(0.22, 1, 0.36, 1);
+        }
+
+        .cassette-tray.ejected {
+            transform: translateY(0px);
+        }
+
+        .cassette-label-strip {
+            width: 100%;
+            height: 19px;
+            border-radius: 5px;
+            background: linear-gradient(90deg, var(--shell-main) 0%, var(--shell-highlight) 100%);
+            border: 1px solid rgba(0,0,0,0.45);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 7px;
+            color: #000000;
+            font-family: var(--font-mono);
+            font-size: 7.5px;
+            font-weight: 800;
+            letter-spacing: 0.4px;
+        }
+
+        .cassette-grip-lines {
+            width: 66px;
+            height: 3px;
+            margin-top: 4px;
+            border-radius: 999px;
+            background: repeating-linear-gradient(
+                90deg,
+                rgba(255, 255, 255, 0.25) 0px,
+                rgba(255, 255, 255, 0.25) 3px,
+                transparent 3px,
+                transparent 6px
+            );
+        }
+
+        .screen-frame {
+            position: relative;
+            width: 100%;
+            flex: 1 1 auto;
+            min-height: 150px;
+            max-height: 485px;
+            border-radius: 22px;
+            padding: 5px;
+            background: linear-gradient(180deg, rgba(255, 255, 255, 0.38) 0%, rgba(0, 0, 0, 0.55) 100%);
+            box-shadow:
+                inset 0 2px 5px rgba(0, 0, 0, 0.45),
+                0 1px 2px rgba(255, 255, 255, 0.35);
+        }
+
+        .screen-surface {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            border-radius: 17px;
+            background: #030407;
+            color: var(--screen-text);
+            border: 1.5px solid #121316;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            padding: 7px 9px 8px 9px;
+        }
+
+        .screen-grid-overlay {
+            position: absolute;
+            inset: 0;
+            background-image:
+                linear-gradient(to right, rgba(0, 240, 255, 0.025) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(0, 240, 255, 0.025) 1px, transparent 1px);
+            background-size: 6px 6px;
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        .screen-off-cover {
+            position: absolute;
+            inset: 0;
+            z-index: 30;
+            background: radial-gradient(circle at center, #0c1017 0%, #000000 100%);
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            color: #a1a1aa;
+            font-family: var(--font-mono);
+            text-align: center;
+            padding: 16px;
+        }
+
+        .screen-surface.screen-powered-off .screen-off-cover {
+            display: flex;
+        }
+
+        .cartridge-chip {
+            padding: 6px 10px;
+            border-radius: 9px;
+            border: 1px solid rgba(255,255,255,0.2);
+            background: rgba(255,255,255,0.06);
+            font-size: 10px;
+            font-weight: 800;
+            cursor: pointer;
+            transition: all 0.15s ease;
+        }
+
+        .cartridge-chip.selected {
+            border-color: var(--quantum-cyan);
+            background: rgba(0, 240, 255, 0.16);
+            color: #ffffff;
+            box-shadow: 0 0 12px rgba(0, 240, 255, 0.3);
+        }
+
+        .quantum-telemetry-strip {
+            position: relative;
+            z-index: 4;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 6px;
+            padding: 3px 6px;
+            margin-bottom: 4px;
+            border-radius: 8px;
+            background: rgba(0, 240, 255, 0.06);
+            border: 1px solid rgba(0, 240, 255, 0.18);
+            font-family: var(--font-mono);
+            font-size: 8.5px;
+            color: #7dd3fc;
+            flex-shrink: 0;
+            cursor: pointer;
+        }
+
+        .mic-level-meter {
+            display: none;
+            align-items: center;
+            gap: 6px;
+            padding: 3px 7px;
+            margin-bottom: 4px;
+            border-radius: 7px;
+            background: rgba(239, 68, 68, 0.14);
+            border: 1px solid rgba(248, 113, 113, 0.45);
+            font-family: var(--font-mono);
+            font-size: 8.5px;
+            font-weight: 800;
+            color: #fca5a5;
+            z-index: 4;
+            flex-shrink: 0;
+        }
+
+        .mic-level-meter.active {
+            display: flex;
+        }
+
+        .mic-bar-track {
+            flex: 1;
+            height: 6px;
+            border-radius: 999px;
+            background: rgba(255, 255, 255, 0.1);
+            overflow: hidden;
+        }
+
+        .mic-bar-fill {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, #22c55e, #facc15, #ef4444);
+            transition: width 0.05s linear;
+        }
+
+        #quantumWaveCanvas {
+            width: 74px;
+            height: 18px;
+            display: block;
+        }
+
+        .offline-queue-banner {
+            display: none;
+            align-items: center;
+            justify-content: space-between;
+            gap: 6px;
+            padding: 3px 8px;
+            margin-bottom: 4px;
+            border-radius: 7px;
+            background: rgba(234, 179, 8, 0.16);
+            border: 1px solid rgba(250, 204, 21, 0.45);
+            color: #fde047;
+            font-family: var(--font-mono);
+            font-size: 9px;
+            font-weight: 700;
+            z-index: 4;
+            flex-shrink: 0;
+            cursor: pointer;
+        }
+
+        .offline-queue-banner.visible {
+            display: flex;
+        }
+
+        .emergency-popup-overlay {
+            position: absolute;
+            inset: 5px;
+            z-index: 25;
+            border-radius: 15px;
+            background: linear-gradient(165deg, #74d628 0%, var(--alert-shell) 55%, var(--alert-bezel) 100%);
+            border: 2px solid #9eff4a;
+            box-shadow: 0 0 24px rgba(116, 214, 40, 0.6), inset 0 1px 2px rgba(255, 255, 255, 0.45);
+            padding: 5px;
+            display: none;
+            flex-direction: column;
+            animation: popupSlideIn 0.18s ease-out;
+        }
+
+        .emergency-popup-overlay.open {
+            display: flex;
+        }
+
+        @keyframes popupSlideIn {
+            from { transform: translateY(-10px) scale(0.96); opacity: 0; }
+            to { transform: translateY(0) scale(1); opacity: 1; }
+        }
+
+        .emergency-inner-screen {
+            flex: 1;
+            border-radius: 11px;
+            background: linear-gradient(180deg, #161b12 0%, #0b0e09 100%);
+            border: 1.5px solid #2a4712;
+            padding: 8px 9px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            color: var(--alert-glow);
+            font-family: var(--font-mono);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .emergency-status-strip {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 6px;
+            font-size: 9.5px;
+            padding-bottom: 5px;
+            border-bottom: 1px solid rgba(126, 247, 44, 0.28);
+            color: #8df840;
+        }
+
+        .emergency-mail-box {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 7px 4px;
+        }
+
+        .emergency-envelope-icon {
+            position: relative;
+            width: 50px;
+            height: 38px;
+            border: 2.5px solid var(--alert-glow);
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            color: var(--alert-glow);
+            box-shadow: 0 0 12px rgba(126, 247, 44, 0.28);
+        }
+
+        .emergency-badge-one {
+            position: absolute;
+            top: -7px;
+            right: -7px;
+            width: 17px;
+            height: 17px;
+            border-radius: 50%;
+            background: #0d120a;
+            border: 2px solid var(--alert-glow);
+            color: var(--alert-glow);
+            font-size: 9.5px;
+            font-weight: 800;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .emergency-meta {
+            min-width: 0;
+            flex: 1;
+            line-height: 1.2;
+        }
+
+        .emergency-title-line {
+            font-size: 14px;
+            font-weight: 800;
+            letter-spacing: 0.4px;
+            color: var(--alert-glow);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .emergency-sub-line {
+            font-size: 10.5px;
+            font-weight: 700;
+            color: #9cff57;
+            margin-top: 2px;
+        }
+
+        .emergency-body-preview {
+            font-size: 12px;
+            font-weight: 700;
+            color: #e4ffd1;
+            background: rgba(126, 247, 44, 0.12);
+            border: 1px solid rgba(126, 247, 44, 0.35);
+            border-radius: 8px;
+            padding: 7px 9px;
+            max-height: 90px;
+            overflow-y: auto;
+            scrollbar-width: none;
+            word-break: break-word;
+        }
+
+        .emergency-body-preview::-webkit-scrollbar {
+            display: none;
+        }
+
+        .emergency-footer-strip {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+            padding-top: 5px;
+            border-top: 1px solid rgba(126, 247, 44, 0.28);
+            font-size: 9.5px;
+        }
+
+        .green-action-btn {
+            padding: 4px 10px;
+            border-radius: 7px;
+            border: 1px solid var(--alert-glow);
+            background: rgba(126, 247, 44, 0.16);
+            color: var(--alert-glow);
+            font-weight: 800;
+            cursor: pointer;
+        }
+
+        .green-action-btn.primary {
+            background: var(--alert-glow);
+            color: #12170e;
+        }
+
+        .top-bar {
+            position: relative;
+            z-index: 4;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 4px;
+            padding-bottom: 4px;
+            border-bottom: 1.5px solid rgba(255, 255, 255, 0.16);
+            font-family: var(--font-mono);
+            font-size: 10px;
+            flex-shrink: 0;
+        }
+
+        .icon-action-btn {
+            width: 24px;
+            height: 24px;
+            border-radius: 7px;
+            border: 1px solid rgba(255, 255, 255, 0.24);
+            background: rgba(255, 255, 255, 0.1);
+            color: inherit;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 9.5px;
+            cursor: pointer;
+            flex-shrink: 0;
+            transition: transform 0.08s ease, background 0.12s ease;
+        }
+
+        .icon-action-btn:active {
+            transform: scale(0.92);
+        }
+
+        .icon-action-btn.muted {
+            background: rgba(220, 38, 38, 0.85);
+            color: #ffffff;
+            border-color: #991b1b;
+        }
+
+        .tabs-row {
+            position: relative;
+            z-index: 4;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            overflow-x: auto;
+            scrollbar-width: none;
+            padding: 4px 0 4px 0;
+            min-height: 32px;
+            flex-shrink: 0;
+        }
+
+        .tabs-row::-webkit-scrollbar {
+            display: none;
+        }
+
+        .channel-tab {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            padding: 3.5px 10px;
+            border-radius: 999px;
+            border: 1px solid rgba(255, 255, 255, 0.26);
+            background: rgba(255, 255, 255, 0.1);
+            color: inherit;
+            font-family: var(--font-mono);
+            font-size: 10px;
+            font-weight: 800;
+            white-space: nowrap;
+            cursor: pointer;
+            transition: background 0.14s ease, transform 0.08s ease;
+        }
+
+        .channel-tab:active {
+            transform: scale(0.96);
+        }
+
+        .channel-tab.active {
+            background: var(--accent-orange);
+            color: #ffffff;
+            border-color: rgba(255,255,255,0.5);
+            box-shadow: 0 0 10px rgba(255, 90, 9, 0.35);
+        }
+
+        #chat-messages {
+            position: relative;
+            z-index: 4;
+            flex: 1 1 auto;
+            min-height: 48px;
+            overflow-y: auto;
+            overscroll-behavior: contain;
+            -webkit-overflow-scrolling: touch;
+            scrollbar-width: none;
+            -ms-overflow-style: none;
+            display: flex;
+            flex-direction: column;
+            gap: 7px;
+            padding: 4px 2px;
+        }
+
+        #chat-messages::-webkit-scrollbar {
+            display: none;
+            width: 0;
+            height: 0;
+        }
+
+        .bubble-me {
+            background: var(--accent-orange);
+            color: #ffffff;
+            border-radius: 12px 12px 3px 12px;
+            font-weight: 600;
+        }
+
+        .bubble-other {
+            background: rgba(255, 255, 255, 0.13);
+            color: #f4f4f5;
+            border: 1px solid rgba(255, 255, 255, 0.18);
+            border-radius: 12px 12px 12px 3px;
+            font-weight: 500;
+        }
+
+        .bubble-emergency {
+            background: rgba(87, 184, 24, 0.22);
+            color: #8df840;
+            border: 1px solid #7ef72c;
+            border-radius: 12px;
+            font-weight: 700;
+        }
+
+        .bubble-collapsed-state {
+            background: linear-gradient(135deg, rgba(6, 182, 212, 0.22) 0%, rgba(168, 85, 247, 0.22) 100%);
+            color: #e0f2fe;
+            border: 1px solid rgba(0, 240, 255, 0.45);
+            border-radius: 12px;
+            font-weight: 500;
+        }
+
+        .quantum-superposition-box {
+            position: relative;
+            cursor: pointer;
+            background: linear-gradient(135deg, rgba(88, 28, 135, 0.45) 0%, rgba(14, 116, 144, 0.45) 100%);
+            border: 1px dashed #c084fc;
+            color: #e9d5ff;
+            border-radius: 12px;
+            padding: 7px 10px;
+            overflow: hidden;
+            animation: quantumPulse 1.8s infinite alternate;
+        }
+
+        .quantum-photo-superposition {
+            position: relative;
+            cursor: pointer;
+            border-radius: 10px;
+            overflow: hidden;
+            border: 1px dashed #c084fc;
+            animation: quantumPulse 1.8s infinite alternate;
+        }
+
+        .quantum-photo-superposition img {
+            filter: blur(14px) saturate(1.8) hue-rotate(45deg);
+            transform: scale(1.08);
+            transition: filter 0.35s ease, transform 0.35s ease;
+        }
+
+        @keyframes quantumPulse {
+            0% { box-shadow: 0 0 6px rgba(192, 132, 252, 0.25); }
+            100% { box-shadow: 0 0 14px rgba(0, 240, 255, 0.45); }
+        }
+
+        .quantum-collapsed-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            font-family: var(--font-mono);
+            font-size: 8.5px;
+            color: #38bdf8;
+            margin-bottom: 2px;
+        }
+
+        .voice-packet-pill {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            min-width: 170px;
+            padding: 2px 2px;
+            cursor: pointer;
+        }
+
+        .voice-play-circle {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            background: rgba(0, 0, 0, 0.42);
+            border: 1px solid rgba(255, 255, 255, 0.4);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 10px;
+            flex-shrink: 0;
+        }
+
+        .voice-packet-pill.playing .voice-play-circle {
+            background: #22c55e;
+            color: #052e16;
+            border-color: #bbf7d0;
+        }
+
+        .chat-image-wrap {
+            position: relative;
+            display: inline-block;
+            border-radius: 9px;
+            overflow: hidden;
+        }
+
+        .img-download-pill {
+            position: absolute;
+            right: 6px;
+            bottom: 6px;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 4px 8px;
+            border-radius: 8px;
+            background: rgba(12, 13, 16, 0.84);
+            color: #ffffff;
+            border: 1px solid rgba(255, 255, 255, 0.28);
+            font-family: var(--font-mono);
+            font-size: 9.5px;
+            font-weight: 800;
+            cursor: pointer;
+            backdrop-filter: blur(4px);
+            -webkit-backdrop-filter: blur(4px);
+        }
+
+        .composer-bar {
+            position: relative;
+            z-index: 4;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            padding-top: 6px;
+            border-top: 1px solid rgba(255, 255, 255, 0.14);
+            flex-shrink: 0;
+        }
+
+        .composer-input {
+            flex: 1;
+            min-width: 0;
+            background: rgba(255, 255, 255, 0.1);
+            color: #ffffff;
+            border: 1px solid rgba(255, 255, 255, 0.22);
+            border-radius: 10px;
+            padding: 6px 8px;
+            font-size: 16px;
+            line-height: 1.25;
+            outline: none;
+            transition: border-color 0.15s ease, background 0.15s ease;
+        }
+
+        .composer-input::placeholder {
+            color: rgba(255, 255, 255, 0.45);
+            font-size: 12px;
+        }
+
+        .composer-input.emergency-armed {
+            border-color: #7ef72c;
+            background: rgba(87, 184, 24, 0.16);
+            color: #d9ffbe;
+        }
+
+        .composer-input.quantum-armed {
+            border-color: #c084fc;
+            background: rgba(168, 85, 247, 0.18);
+            color: #f3e8ff;
+        }
+
+        .mode-pill-btn {
+            height: 31px;
+            padding: 0 7px;
+            border-radius: 9px;
+            font-family: var(--font-mono);
+            font-size: 9px;
+            font-weight: 800;
+            display: inline-flex;
+            align-items: center;
+            gap: 3px;
+            cursor: pointer;
+            flex-shrink: 0;
+            transition: all 0.12s ease;
+        }
+
+        .emergency-mode-btn {
+            border: 1px solid rgba(126, 247, 44, 0.45);
+            background: rgba(87, 184, 24, 0.15);
+            color: #7ef72c;
+        }
+
+        .emergency-mode-btn.armed {
+            background: #7ef72c;
+            color: #0b1206;
+            border-color: #b7ff85;
+            box-shadow: 0 0 12px rgba(126, 247, 44, 0.6);
+        }
+
+        .quantum-mode-btn {
+            border: 1px solid rgba(192, 132, 252, 0.45);
+            background: rgba(168, 85, 247, 0.15);
+            color: #d8b4fe;
+        }
+
+        .quantum-mode-btn.armed {
+            background: #a855f7;
+            color: #ffffff;
+            border-color: #e9d5ff;
+            box-shadow: 0 0 12px rgba(168, 85, 247, 0.65);
+        }
+
+        .bottom-controls {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            padding: 0 4px;
+            flex-shrink: 0;
+        }
+
+        .confetti-pad {
+            width: 58px;
+            height: 58px;
+            border-radius: 50%;
+            background: linear-gradient(180deg, rgba(0,0,0,0.45) 0%, rgba(255,255,255,0.28) 100%);
+            padding: 4px;
+            box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.35);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            border: none;
+            flex-shrink: 0;
+        }
+
+        .confetti-cap {
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            background: radial-gradient(circle at 35% 30%, #34363e 0%, #1c1d22 75%);
+            border: 1px solid #0f1013;
+            box-shadow: 0 3px 6px rgba(0, 0, 0, 0.35), inset 0 1px 2px rgba(255, 255, 255, 0.18);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: var(--shell-highlight);
+            gap: 1px;
+            transition: transform 0.08s ease;
+        }
+
+        .confetti-pad:active .confetti-cap {
+            transform: scale(0.93);
+        }
+
+        .dual-pill {
+            flex: 1;
+            max-width: 196px;
+            height: 58px;
+            border-radius: 30px;
+            background: linear-gradient(180deg, rgba(0,0,0,0.45) 0%, rgba(255,255,255,0.28) 100%);
+            padding: 4px;
+            box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.35);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 4px;
+        }
+
+        .round-key {
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            background: radial-gradient(circle at 35% 30%, #32343c 0%, #1a1b20 80%);
+            border: 1px solid #0e0f12;
+            box-shadow: 0 3px 6px rgba(0, 0, 0, 0.35), inset 0 1px 2px rgba(255, 255, 255, 0.16);
+            color: #f4f4f5;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: transform 0.08s ease, background 0.15s ease;
+            flex-shrink: 0;
+        }
+
+        .round-key:active {
+            transform: scale(0.92);
+        }
+
+        .round-key.card-ejected {
+            background: radial-gradient(circle at 35% 30%, #ef4444 0%, #991b1b 85%);
+            color: #ffffff;
+        }
+
+        .round-key.recording-voice {
+            background: radial-gradient(circle at 35% 30%, #ef4444 0%, #7f1d1d 85%);
+            color: #ffffff;
+            box-shadow: 0 0 14px rgba(239, 68, 68, 0.75);
+            animation: recPulse 0.8s infinite alternate;
+        }
+
+        @keyframes recPulse {
+            from { transform: scale(0.96); }
+            to { transform: scale(1.04); }
+        }
+
+        .app-viewport.kb-open .confetti-pad {
+            width: 40px;
+            height: 40px;
+            padding: 3px;
+        }
+
+        .app-viewport.kb-open .dual-pill {
+            height: 40px;
+            max-width: 136px;
+            padding: 3px;
+        }
+
+        .app-viewport.kb-open .round-key {
+            width: 32px;
+            height: 32px;
+        }
+
+        .app-viewport.kb-open .confetti-cap span,
+        .app-viewport.kb-open .round-key span:last-child {
+            display: none;
+        }
+
+        .modal-backdrop {
+            position: fixed;
+            inset: 0;
+            background: rgba(15, 16, 20, 0.78);
+            z-index: 60;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 16px;
+        }
+
+        .modal-backdrop.open {
+            display: flex;
+        }
+
+        .modal-card {
+            width: 100%;
+            max-width: 350px;
+            background: #1c1d22;
+            border: 2px solid var(--accent-orange);
+            border-radius: 22px;
+            padding: 16px;
+            color: #f4f4f5;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.45);
+        }
+    </style>
+</head>
+<body>
+
+    <div class="app-viewport" id="appViewport">
+        <main class="terminal-stage">
+            <div class="device-shell" id="deviceShell">
+                <div class="left-edge-notch"></div>
+
+                <div class="screen-frame">
+                    <div class="screen-surface" id="screenSurface">
+                        <div class="screen-grid-overlay"></div>
+
+                        <!-- KASET ÇIKARILDIĞINDA KARTUŞ SEÇİCİ EKRAN -->
+                        <div class="screen-off-cover" id="screenOffCover">
+                            <i class="fa-solid fa-atom text-3xl text-cyan-400 animate-spin" style="animation-duration: 8s;"></i>
+                            <div class="text-[11px] font-extrabold tracking-wider text-white">KARTUŞ YUVASI BOŞ · ÖZEL HATLAR GİZLİ</div>
+                            <div class="text-[9px] text-zinc-400 max-w-[240px]">Kuantum işletim modülünü seçip kaseti tekrar yuvaya takın:</div>
+
+                            <div class="flex flex-col gap-1.5 w-full max-w-[230px] my-1">
+                                <button type="button" onclick="selectCartridge('std')" id="cart-btn-std" class="cartridge-chip selected">
+                                    🟠 Q-STD // TAKTİK PAGER OS
+                                </button>
+                                <button type="button" onclick="selectCartridge('ghost')" id="cart-btn-ghost" class="cartridge-chip">
+                                    🟣 Q-GHOST // SÜPERPOZİSYON MODU
+                                </button>
+                            </div>
+
+                            <button type="button" onclick="toggleCardSlot()" class="mt-1 px-4 py-1.5 rounded-full bg-cyan-500 text-black font-extrabold text-[10px] tracking-wide">
+                                KASETİ YUVAYA TAK
+                            </button>
+                        </div>
+
+                        <!-- YEŞİL ACİL BİLDİRİM POP-UP PENCERESİ -->
+                        <div class="emergency-popup-overlay" id="emergencyPopupOverlay" role="alertdialog" aria-live="assertive">
+                            <div class="emergency-inner-screen">
+                                <div>
+                                    <div class="emergency-status-strip">
+                                        <span>
+                                            &gt;&gt;&gt; <i class="fa-solid fa-bell"></i> <i class="fa-solid fa-triangle-exclamation"></i> <i class="fa-solid fa-tower-broadcast"></i>
+                                        </span>
+                                        <span id="popupChannelTag">EMERGENCY ALERT</span>
+                                    </div>
+
+                                    <div class="emergency-mail-box">
+                                        <div class="emergency-envelope-icon">
+                                            <i class="fa-regular fa-envelope text-xl"></i>
+                                            <span class="emergency-badge-one" id="popupUnreadCount">1</span>
+                                        </div>
+                                        <div class="emergency-meta">
+                                            <div class="emergency-title-line" id="popupTitle">EMERGENCY ALERT</div>
+                                            <div class="emergency-sub-line" id="popupDateLine">27/11/2026</div>
+                                            <div class="emergency-sub-line" id="popupTimeLine">01:15 AM</div>
+                                        </div>
+                                    </div>
+
+                                    <div class="emergency-body-preview selectable-text" id="popupMessageBody">
+                                        Acil durum bildirimi...
+                                    </div>
+                                </div>
+
+                                <div class="emergency-footer-strip">
+                                    <span id="popupSenderInfo" class="truncate opacity-85">GÖNDEREN: ----</span>
+                                    <div class="flex items-center gap-1.5 flex-shrink-0">
+                                        <button type="button" class="green-action-btn primary" onclick="openAlertChannelAndClose()">
+                                            AÇ
+                                        </button>
+                                        <button type="button" class="green-action-btn" onclick="dismissEmergencyPopup()">
+                                            KAPAT
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Üst Durum ve Aksiyon Çubuğu -->
+                        <div class="top-bar">
+                            <div class="flex items-center gap-1.5 min-w-0">
+                                <span id="led-indicator" class="w-2 h-2 rounded-full bg-stone-500 flex-shrink-0" title="Bağlantı Durumu"></span>
+                                <span id="my-identity" onclick="copyMyId()" class="font-bold cursor-pointer truncate" title="ID Kopyala">ID: ----</span>
+                                <span>·</span>
+                                <span id="active-chat-title" class="font-bold truncate">ORTAK ALAN</span>
+                            </div>
+                            <div class="flex items-center gap-1 flex-shrink-0">
+                                <button type="button" id="shake-toggle-btn" onclick="enableMotionShakeSensor()" class="icon-action-btn" title="Sallama Rezonans Sensörü">
+                                    <i class="fa-solid fa-mobile-screen-button"></i>
+                                </button>
+                                <button type="button" id="notif-toggle-btn" onclick="toggleNotifications()" class="icon-action-btn" title="Bildirimleri Aç/Kapat">
+                                    <i id="notif-icon" class="fa-solid fa-bell"></i>
+                                </button>
+                                <button type="button" id="btnOpenContacts" onclick="openContactsBookModal()" class="icon-action-btn" title="Kişi Rehberi">
+                                    <i class="fa-solid fa-address-book"></i>
+                                </button>
+                                <button type="button" id="btnOpenAddContact" onclick="openAddContactModal()" class="icon-action-btn" title="Kişi Ekle">
+                                    <i class="fa-solid fa-user-plus"></i>
+                                </button>
+                                <button type="button" id="btnClearChannel" onclick="clearCurrentChannelMessages()" class="icon-action-btn" title="Kanalı Temizle">
+                                    <i class="fa-solid fa-trash"></i>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- BB84 KUANTUM ANAHTAR DAĞITIMI & ANLIK DALGA OSİLOSKOPU -->
+                        <div class="quantum-telemetry-strip" onclick="runBb84KeyHandshake()" title="BB84 Kuantum Anahtar Yenile">
+                            <div class="flex items-center gap-1.5 truncate">
+                                <i class="fa-solid fa-atom text-cyan-400"></i>
+                                <span id="quantumStatusText">BB84-QKD // QBER:0.4%</span>
+                            </div>
+                            <canvas id="quantumWaveCanvas" width="148" height="36"></canvas>
+                        </div>
+
+                        <!-- CANLI MİKROFON SEVİYE BARI (KAYIT SIRASINDA GÖRÜNÜR) -->
+                        <div class="mic-level-meter" id="micLevelMeter">
+                            <span><i class="fa-solid fa-microphone-lines mr-1"></i>MIC</span>
+                            <div class="mic-bar-track">
+                                <div class="mic-bar-fill" id="micBarFill"></div>
+                            </div>
+                            <span id="micDbText">0%</span>
+                        </div>
+
+                        <!-- ÇEVRİMDIŞI KUYRUK BİLDİRİMİ -->
+                        <div class="offline-queue-banner" id="offlineQueueBanner" onclick="manageOfflineQueueModal()" title="Kuyruğu Yönet">
+                            <span><i class="fa-solid fa-hourglass-half mr-1"></i> KUYRUK: <b id="offlineQueueCount">0</b> İLETİ</span>
+                            <span>YÖNET →</span>
+                        </div>
+
+                        <!-- Kanal Sekmeleri -->
+                        <div id="channel-tabs" class="tabs-row"></div>
+
+                        <!-- Mesaj Akışı -->
+                        <div id="chat-messages"></div>
+
+                        <!-- Alt Mesaj Giriş Çubuğu -->
+                        <form id="chat-form" onsubmit="handleFormSubmit(event)" class="composer-bar">
+                            <input type="file" id="file-input" accept="image/*" class="hidden" onchange="handleFileSelected(event)" />
+
+                            <button type="button" id="btnQuantumToggle" onclick="toggleQuantumSuperpositionMode()" class="mode-pill-btn quantum-mode-btn" title="Süperpozisyon Modu (Mesaj ve Fotoğraf Dokununca Çözülür)">
+                                <i class="fa-solid fa-atom"></i>
+                                <span>Ψ</span>
+                            </button>
+
+                            <button type="button" id="btnEmergencyToggle" onclick="toggleEmergencyMode()" class="mode-pill-btn emergency-mode-btn" title="Acil Mesaj Modu">
+                                <i class="fa-solid fa-triangle-exclamation"></i>
+                                <span>ACİL</span>
+                            </button>
+
+                            <input type="text" id="chat-input" placeholder="Mesaj yaz..." autocomplete="off" class="composer-input" />
+
+                            <button id="send-btn" type="submit" class="icon-action-btn" style="width:31px;height:31px;background:var(--accent-orange);color:#ffffff;border-color:rgba(255,255,255,0.4);" title="Gönder">
+                                <i class="fa-solid fa-paper-plane"></i>
+                            </button>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- Alt Fiziksel Kontrol Tuşları -->
+                <div class="bottom-controls">
+                    <button type="button" class="confetti-pad" id="btnConfettiKey" onclick="sendConfettiSignal()" title="Kuantum Rezonans / Konfeti" aria-label="Konfeti Gönder">
+                        <span class="confetti-cap">
+                            <i class="fa-solid fa-wand-magic-sparkles text-xs"></i>
+                            <span style="font-size:6.5px;font-weight:800;letter-spacing:0.3px;font-family:var(--font-mono);">KONFETİ</span>
+                        </span>
+                    </button>
+
+                    <div class="dual-pill">
+                        <button type="button" class="round-key" id="btnPhotoKey" onclick="triggerPhotoPicker()" title="Fotoğraf Gönder" aria-label="Fotoğraf Gönder">
+                            <i class="fa-solid fa-camera text-xs"></i>
+                            <span style="font-size:6.5px;font-weight:700;font-family:var(--font-mono);opacity:0.85;">FOTO</span>
+                        </button>
+
+                        <button type="button" class="round-key" id="btnVoiceKey" onclick="toggleVoiceWalkieTalkie()" title="Süresiz Ses Kaydet / Gönder" aria-label="Ses Paketi">
+                            <i id="voiceKeyIcon" class="fa-solid fa-microphone text-xs text-cyan-400"></i>
+                            <span id="voiceKeyLabel" style="font-size:6.5px;font-weight:700;font-family:var(--font-mono);color:#38bdf8;">SES</span>
+                        </button>
+
+                        <button type="button" class="round-key" id="btnCardKey" onclick="toggleCardSlot()" title="Kaseti Çıkar / Kartuş Değiştir" aria-label="Kaseti Çıkar veya Tak">
+                            <span class="text-sm font-extrabold leading-none">□</span>
+                            <span id="cardKeyLabel" style="font-size:6.5px;font-weight:700;font-family:var(--font-mono);opacity:0.85;">KART</span>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="bottom-slot-mouth"></div>
+            </div>
+
+            <div class="cassette-tray" id="cassetteTray" onclick="toggleCardSlot()" title="Kaseti Tak / Çıkar">
+                <div class="cassette-label-strip">
+                    <span id="cassetteCartridgeName">Q-STD OS</span>
+                    <span id="cassetteStateText">TAKILI</span>
+                </div>
+                <div class="cassette-grip-lines"></div>
+            </div>
+        </main>
+    </div>
+
+    <!-- GÖRSEL ÖNİZLEME VE İNDİRME MODALI -->
+    <div id="image-preview-modal" class="modal-backdrop">
+        <div class="modal-card max-w-[380px] flex flex-col gap-3">
+            <div class="flex items-center justify-between border-b border-white/10 pb-2">
+                <span class="font-bold text-xs font-mono flex items-center gap-1.5 text-cyan-400">
+                    <i class="fa-regular fa-image"></i>
+                    <span id="preview-modal-title">GÖRSEL ÖNİZLEME</span>
+                </span>
+                <button type="button" onclick="closeImagePreviewModal()" class="text-zinc-400 hover:text-white px-1">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <div class="bg-black/60 rounded-xl border border-white/15 p-1.5 flex items-center justify-center max-h-[55dvh] overflow-hidden">
+                <img id="preview-modal-img" src="" alt="Önizleme" class="max-w-full max-h-[52dvh] object-contain rounded-lg" />
+            </div>
+
+            <div id="ios-save-hint" class="hidden text-[10px] font-mono text-zinc-300 bg-white/5 border border-white/10 rounded-lg px-2.5 py-1.5 leading-snug">
+                <i class="fa-brands fa-apple text-cyan-400 mr-1"></i>
+                iPhone: Paylaşım menüsünden <b>"Görüntüyü Kaydet"</b> seçin veya görsele basılı tutup Fotoğraflar'a kaydedin.
+            </div>
+
+            <div class="grid grid-cols-2 gap-2 text-xs font-mono">
+                <button type="button" onclick="downloadCurrentPreviewImage()" class="py-2.5 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white font-extrabold flex items-center justify-center gap-1.5">
+                    <i class="fa-solid fa-download"></i>
+                    <span>İNDİR / KAYDET</span>
+                </button>
+                <button type="button" onclick="closeImagePreviewModal()" class="py-2.5 rounded-xl bg-white/10 hover:bg-white/15 font-bold">
+                    KAPAT
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- KİŞİ EKLEME MODALI -->
+    <div id="contact-modal" class="modal-backdrop">
+        <div class="modal-card">
+            <div class="flex items-center justify-between border-b border-white/10 pb-2 mb-3">
+                <div class="flex items-center gap-2 text-xs font-bold font-mono">
+                    <i class="fa-solid fa-atom text-cyan-400"></i>
+                    <span>KUANTUM DOLANIKLIK EŞLEŞTİR</span>
+                </div>
+                <button type="button" onclick="closeAddContactModal()" class="text-zinc-400 hover:text-white">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <div class="flex flex-col gap-2.5 mb-3 text-xs">
+                <input type="text" id="friend-name-input" placeholder="Kişi İsmi / Kod Adı"
+                       class="bg-black/40 border border-white/15 rounded-xl py-2 px-3 text-white placeholder-zinc-400 focus:outline-none focus:border-cyan-400" />
+                <input type="text" id="friend-id-input" placeholder="4 Haneli Kuantum ID (Örn: A8F2)" maxlength="4"
+                       class="bg-black/40 border border-white/15 rounded-xl py-2 px-3 font-mono uppercase text-cyan-400 placeholder-zinc-400 focus:outline-none focus:border-cyan-400" />
+            </div>
+
+            <div class="grid grid-cols-3 gap-2 text-xs font-mono">
+                <button type="button" onclick="closeAddContactModal()" class="py-2 rounded-xl bg-white/10 hover:bg-white/15 font-bold">
+                    İptal
+                </button>
+                <button type="button" onclick="copyMyId()" class="py-2 rounded-xl bg-white/10 hover:bg-white/15 font-bold">
+                    <i class="fa-regular fa-copy mr-1"></i>ID
+                </button>
+                <button type="button" id="btnSaveContact" onclick="saveContact()" class="py-2 rounded-xl bg-cyan-600 text-white font-extrabold">
+                    Bağla
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- KİŞİ REHBERİ MODALI -->
+    <div id="contacts-book-modal" class="modal-backdrop">
+        <div class="modal-card max-h-[82vh] flex flex-col">
+            <div class="flex items-center justify-between border-b border-white/10 pb-2 mb-2.5">
+                <span class="font-bold text-xs font-mono flex items-center gap-1.5">
+                    <i class="fa-solid fa-address-book text-cyan-400"></i> DOLANIKLIK REHBERİ
+                </span>
+                <button type="button" onclick="closeContactsBookModal()" class="text-zinc-400 hover:text-white">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <div class="relative mb-2.5">
+                <i class="fa-solid fa-search absolute left-3 top-2.5 text-[10px] text-zinc-400"></i>
+                <input type="text" id="contact-search-input" oninput="filterContactsList(this.value)" placeholder="İsim veya ID ile ara..."
+                       class="w-full bg-black/40 border border-white/15 rounded-xl py-1.5 pl-8 pr-3 text-xs text-white placeholder-zinc-400 focus:outline-none focus:border-cyan-400" />
+            </div>
+
+            <div id="contacts-list-container" class="flex-1 overflow-y-auto flex flex-col gap-1.5 max-h-[240px] mb-3 pr-1"></div>
+
+            <div class="grid grid-cols-2 gap-2 text-xs font-mono">
+                <button type="button" onclick="closeContactsBookModal(); openAddContactModal();" class="py-2 rounded-xl bg-cyan-600 text-white font-extrabold">
+                    <i class="fa-solid fa-user-plus mr-1"></i>Yeni Bağlantı
+                </button>
+                <button type="button" onclick="closeContactsBookModal()" class="py-2 rounded-xl bg-white/10 hover:bg-white/15 font-bold">
+                    Kapat
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function escapeHtml(str = '') {
+            return String(str)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+
+        function escapeJsSingle(str = '') {
+            return String(str)
+                .replace(/\\/g, '\\\\')
+                .replace(/'/g, "\\'");
+        }
+
+        function formatDurationClock(totalSec) {
+            const safeSec = Math.max(0, Math.floor(Number(totalSec) || 0));
+            const mins = Math.floor(safeSec / 60);
+            const secs = safeSec % 60;
+            return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+        }
+
+        // --- BB84 KUANTUM ANAHTAR DAĞITIMI & ANLIK DALGA OSİLOSKOPU ---
+        let wavePhase = 0;
+        let waveAmplitudeBoost = 1;
+        let liveMicLevel = 0;
+        let currentQber = 0.4;
+
+        function startQuantumWaveOscilloscope() {
+            const canvas = document.getElementById('quantumWaveCanvas');
+            if (!canvas) return;
+            const ctx = canvas.getContext('2d');
+
+            function draw() {
+                const w = canvas.width;
+                const h = canvas.height;
+                ctx.clearRect(0, 0, w, h);
+
+                wavePhase += isRecordingVoice ? (0.22 + liveMicLevel * 0.25) : 0.14;
+                waveAmplitudeBoost += (1 - waveAmplitudeBoost) * 0.08;
+
+                const micGain = isRecordingVoice ? (0.35 + liveMicLevel * 2.4) : 0;
+                const ampMultiplier = Math.min(2.8, waveAmplitudeBoost + micGain);
+
+                ctx.lineWidth = isRecordingVoice ? 2.6 : 2;
+                ctx.strokeStyle = isRecordingVoice
+                    ? '#ef4444'
+                    : (emergencyArmed ? '#7ef72c' : (quantumSuperpositionArmed ? '#c084fc' : '#00f0ff'));
+
+                ctx.beginPath();
+                for (let x = 0; x < w; x++) {
+                    const envelope = Math.sin((x / w) * Math.PI);
+                    const highFreq = isRecordingVoice
+                        ? Math.sin(x * 0.34 - wavePhase * 1.9) * (0.35 + liveMicLevel * 0.85)
+                        : Math.cos(x * 0.05 - wavePhase * 0.7) * 0.65;
+                    const y = (h / 2) + Math.sin(x * 0.16 + wavePhase) * (0.55 + highFreq) * (h * 0.36) * envelope * ampMultiplier;
+                    if (x === 0) ctx.moveTo(x, y);
+                    else ctx.lineTo(x, y);
+                }
+                ctx.stroke();
+
+                requestAnimationFrame(draw);
+            }
+            requestAnimationFrame(draw);
+        }
+
+        function pulseQuantumWave() {
+            waveAmplitudeBoost = 2.05;
+        }
+
+        function runBb84KeyHandshake() {
+            const statusText = document.getElementById('quantumStatusText');
+            if (!statusText) return;
+            pulseQuantumWave();
+            playKeyBeep(820);
+
+            const bases = ['+', '×', '+', '×', '×', '+'];
+            let idx = 0;
+            const interval = setInterval(() => {
+                if (idx < bases.length) {
+                    statusText.innerText = `BB84 BAZ [${bases[idx]}] // EŞLEŞİYOR...`;
+                    idx++;
+                } else {
+                    clearInterval(interval);
+                    currentQber = (0.1 + Math.random() * 0.7).toFixed(1);
+                    statusText.innerText = quantumSuperpositionArmed
+                        ? `Ψ SÜPERPOZİSYON // QBER:${currentQber}%`
+                        : `BB84-QKD // QBER:${currentQber}%`;
+                }
+            }, 95);
+        }
+
+        // --- CİHAZ HAREKETİ (SHAKE) REZONANS SENSÖRÜ ---
+        let shakeEnabled = false;
+        let lastShakeTs = 0;
+        let lastAccel = { x: null, y: null, z: null };
+
+        function enableMotionShakeSensor() {
+            initAudio();
+            if (typeof DeviceMotionEvent !== 'undefined' && typeof DeviceMotionEvent.requestPermission === 'function') {
+                DeviceMotionEvent.requestPermission().then((state) => {
+                    if (state === 'granted') {
+                        attachShakeListener();
+                    } else {
+                        alert("Hareket sensörü izni verilmedi.");
+                    }
+                }).catch(() => {});
+            } else {
+                attachShakeListener();
+            }
+        }
+
+        function attachShakeListener() {
+            const btn = document.getElementById('shake-toggle-btn');
+            if (shakeEnabled) {
+                shakeEnabled = false;
+                if (btn) {
+                    btn.classList.remove('muted');
+                    btn.style.background = '';
+                }
+                playKeyBeep(380);
+                return;
+            }
+            shakeEnabled = true;
+            if (btn) {
+                btn.classList.add('muted');
+                btn.style.background = '#0284c7';
+            }
+            playKeyBeep(940);
+
+            window.addEventListener('devicemotion', (event) => {
+                if (!shakeEnabled || cardEjected) return;
+                const acc = event.accelerationIncludingGravity;
+                if (!acc) return;
+
+                if (lastAccel.x !== null) {
+                    const delta = Math.abs(acc.x - lastAccel.x) + Math.abs(acc.y - lastAccel.y) + Math.abs(acc.z - lastAccel.z);
+                    const now = Date.now();
+                    if (delta > 34 && now - lastShakeTs > 1400) {
+                        lastShakeTs = now;
+                        sendConfettiSignal();
+                    }
+                }
+                lastAccel = { x: acc.x, y: acc.y, z: acc.z };
+            }, { passive: true });
+        }
+
+        // --- WEB CRYPTO API: GERÇEK AES-256-GCM KUANTUM DİRENÇLİ ANAHTAR TÜRETME ---
+        const cryptoKeyCache = new Map();
+        async function getAesGcmKey(channelSecret) {
+            if (cryptoKeyCache.has(channelSecret)) {
+                return cryptoKeyCache.get(channelSecret);
+            }
+            const enc = new TextEncoder();
+            const keyMaterial = await window.crypto.subtle.importKey(
+                'raw',
+                enc.encode('HAMZACHAT_Q_ENTROPY_2026::' + channelSecret),
+                { name: 'PBKDF2' },
+                false,
+                ['deriveKey']
+            );
+            const derivedKey = await window.crypto.subtle.deriveKey(
+                {
+                    name: 'PBKDF2',
+                    salt: enc.encode('Q_SALT_' + channelSecret),
+                    iterations: 100000,
+                    hash: 'SHA-256'
+                },
+                keyMaterial,
+                { name: 'AES-GCM', length: 256 },
+                false,
+                ['encrypt', 'decrypt']
+            );
+            cryptoKeyCache.set(channelSecret, derivedKey);
+            return derivedKey;
+        }
+
+        async function encryptTextQuantum(plainText, channelKey) {
+            try {
+                if (!window.crypto || !window.crypto.subtle) {
+                    return 'LEGACY:' + btoa(unescape(encodeURIComponent(plainText)));
+                }
+                const key = await getAesGcmKey(channelKey);
+                const iv = window.crypto.getRandomValues(new Uint8Array(12));
+                const encoded = new TextEncoder().encode(plainText);
+                const cipherBuffer = await window.crypto.subtle.encrypt(
+                    { name: 'AES-GCM', iv },
+                    key,
+                    encoded
+                );
+                const combined = new Uint8Array(iv.length + cipherBuffer.byteLength);
+                combined.set(iv, 0);
+                combined.set(new Uint8Array(cipherBuffer), iv.length);
+
+                let bin = '';
+                for (let i = 0; i < combined.length; i++) bin += String.fromCharCode(combined[i]);
+                return 'QGCM:' + btoa(bin);
+            } catch (e) {
+                return 'LEGACY:' + btoa(unescape(encodeURIComponent(plainText)));
+            }
+        }
+
+        async function decryptTextQuantum(cipherPayload, channelKey) {
+            try {
+                if (!cipherPayload) return '';
+                if (cipherPayload.startsWith('QGCM:')) {
+                    const rawB64 = cipherPayload.slice(5);
+                    const bin = atob(rawB64);
+                    const bytes = new Uint8Array(bin.length);
+                    for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+
+                    const iv = bytes.slice(0, 12);
+                    const data = bytes.slice(12);
+                    const key = await getAesGcmKey(channelKey);
+                    const decryptedBuffer = await window.crypto.subtle.decrypt(
+                        { name: 'AES-GCM', iv },
+                        key,
+                        data
+                    );
+                    return new TextDecoder().decode(decryptedBuffer);
+                }
+                if (cipherPayload.startsWith('LEGACY:')) {
+                    return decodeURIComponent(escape(atob(cipherPayload.slice(7))));
+                }
+                let decoded = decodeURIComponent(escape(atob(cipherPayload)));
+                let result = '';
+                for (let i = 0; i < decoded.length; i++) {
+                    result += String.fromCharCode(decoded.charCodeAt(i) ^ channelKey.charCodeAt(i % channelKey.length));
+                }
+                return result;
+            } catch (e) {
+                return "[Kuantum Şifreli Paket]";
+            }
+        }
+
+        // --- MİKROFON İZİN KONTROLÜ & SÜRESİZ TELSİZ SES KAYIT / OYNATMA ---
+        let mediaRecorder = null;
+        let audioChunks = [];
+        let isRecordingVoice = false;
+        let voiceTimerInterval = null;
+        let micAnalyserRaf = null;
+        let micAudioCtx = null;
+        const voiceDataStore = new Map();
+        let activeAudioPlayer = null;
+        let activePlayingVoiceId = null;
+
+        function updateMicLevelUI(normalizedLevel) {
+            const meter = document.getElementById('micLevelMeter');
+            const fill = document.getElementById('micBarFill');
+            const pctText = document.getElementById('micDbText');
+            if (!meter || !fill || !pctText) return;
+
+            meter.classList.toggle('active', isRecordingVoice);
+            const pct = Math.max(0, Math.min(100, Math.round(normalizedLevel * 100)));
+            fill.style.width = `${pct}%`;
+            pctText.innerText = `${pct}%`;
+        }
+
+        async function checkMicrophonePermissionAndStream() {
+            if (!window.isSecureContext && location.hostname !== 'localhost' && location.hostname !== '127.0.0.1') {
+                return {
+                    ok: false,
+                    errorMsg: "Mikrofon erişimi için güvenli bağlantı (HTTPS) gereklidir."
+                };
+            }
+
+            if (!navigator.mediaDevices || typeof navigator.mediaDevices.getUserMedia !== 'function') {
+                return {
+                    ok: false,
+                    errorMsg: "Tarayıcınız mikrofon kaydını (MediaDevices/getUserMedia) desteklemiyor."
+                };
+            }
+
+            if (navigator.permissions && typeof navigator.permissions.query === 'function') {
+                try {
+                    const permStatus = await navigator.permissions.query({ name: 'microphone' });
+                    if (permStatus && permStatus.state === 'denied') {
+                        return {
+                            ok: false,
+                            errorMsg: "Mikrofon izni engellenmiş. Tarayıcı/cihaz ayarlarından bu site için Mikrofon iznini açın."
+                        };
+                    }
+                } catch (permErr) {
+                    // iOS Safari bazı sürümlerde permissions.query('microphone') desteklemez; getUserMedia ile devam edilir.
+                }
+            }
+
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({
+                    audio: {
+                        echoCancellation: true,
+                        noiseSuppression: true,
+                        autoGainControl: true
+                    }
+                });
+
+                const audioTracks = stream.getAudioTracks ? stream.getAudioTracks() : [];
+                if (!audioTracks.length || audioTracks[0].readyState !== 'live') {
+                    stream.getTracks().forEach(t => t.stop());
+                    return {
+                        ok: false,
+                        errorMsg: "Aktif ses girişi bulunamadı. Mikrofonun bağlı ve sessiz modda olmadığından emin olun."
+                    };
+                }
+
+                return { ok: true, stream };
+            } catch (err) {
+                const name = (err && err.name) || '';
+                if (name === 'NotAllowedError' || name === 'PermissionDeniedError') {
+                    return {
+                        ok: false,
+                        errorMsg: "Mikrofon izni verilmedi. İzin istemini onaylayın veya tarayıcı ayarlarından mikrofonu etkinleştirin."
+                    };
+                }
+                if (name === 'NotFoundError' || name === 'DevicesNotFoundError') {
+                    return {
+                        ok: false,
+                        errorMsg: "Cihazda mikrofon bulunamadı."
+                    };
+                }
+                if (name === 'NotReadableError' || name === 'TrackStartError') {
+                    return {
+                        ok: false,
+                        errorMsg: "Mikrofon başka bir uygulama tarafından kullanılıyor olabilir. Lütfen kapatıp tekrar deneyin."
+                    };
+                }
+                return {
+                    ok: false,
+                    errorMsg: `Mikrofon başlatılamadı (${name || 'Bilinmeyen Hata'}).`
+                };
+            }
+        }
+
+        async function toggleVoiceWalkieTalkie() {
+            if (cardEjected) return;
+            initAudio();
+
+            if (isRecordingVoice && mediaRecorder) {
+                stopVoiceRecording();
+                return;
+            }
+
+            const micCheck = await checkMicrophonePermissionAndStream();
+            if (!micCheck.ok || !micCheck.stream) {
+                alert(micCheck.errorMsg || "Mikrofon erişimi sağlanamadı.");
+                return;
+            }
+
+            const stream = micCheck.stream;
+
+            try {
+                const candidates = [
+                    'audio/webm;codecs=opus',
+                    'audio/webm',
+                    'audio/mp4',
+                    'audio/ogg;codecs=opus'
+                ];
+                const mimeType = (typeof MediaRecorder !== 'undefined' && MediaRecorder.isTypeSupported)
+                    ? (candidates.find(t => MediaRecorder.isTypeSupported(t)) || '')
+                    : '';
+
+                mediaRecorder = mimeType ? new MediaRecorder(stream, { mimeType }) : new MediaRecorder(stream);
+                audioChunks = [];
+                const recordStartTs = Date.now();
+                const finalMimeType = mediaRecorder.mimeType || mimeType || 'audio/webm';
+
+                // Anlık mikrofon dalga genliği okuyucu (TimeDomain RMS + Peak)
+                try {
+                    const AudioCtxClass = window.AudioContext || window.webkitAudioContext;
+                    micAudioCtx = new AudioCtxClass();
+                    if (micAudioCtx.state === 'suspended') {
+                        await micAudioCtx.resume().catch(() => {});
+                    }
+                    const src = micAudioCtx.createMediaStreamSource(stream);
+                    const analyser = micAudioCtx.createAnalyser();
+                    analyser.fftSize = 256;
+                    analyser.smoothingTimeConstant = 0.2;
+                    src.connect(analyser);
+
+                    const timeData = new Uint8Array(analyser.fftSize);
+                    const tickLevel = () => {
+                        if (!isRecordingVoice) {
+                            liveMicLevel = 0;
+                            updateMicLevelUI(0);
+                            return;
+                        }
+                        analyser.getByteTimeDomainData(timeData);
+                        let sumSq = 0;
+                        let peak = 0;
+                        for (let i = 0; i < timeData.length; i++) {
+                            const centered = (timeData[i] - 128) / 128;
+                            const absVal = Math.abs(centered);
+                            if (absVal > peak) peak = absVal;
+                            sumSq += centered * centered;
+                        }
+                        const rms = Math.sqrt(sumSq / timeData.length);
+                        const combined = Math.min(1.8, (rms * 4.2 + peak * 1.15));
+                        liveMicLevel = combined;
+                        updateMicLevelUI(Math.min(1, combined / 1.35));
+                        micAnalyserRaf = requestAnimationFrame(tickLevel);
+                    };
+                    tickLevel();
+                } catch (e) {}
+
+                mediaRecorder.ondataavailable = (ev) => {
+                    if (ev.data && ev.data.size > 0) audioChunks.push(ev.data);
+                };
+
+                mediaRecorder.onstop = () => {
+                    stream.getTracks().forEach(t => t.stop());
+                    if (micAudioCtx) {
+                        micAudioCtx.close().catch(() => {});
+                        micAudioCtx = null;
+                    }
+                    liveMicLevel = 0;
+                    updateMicLevelUI(0);
+
+                    const durationSec = Math.max(1, Math.round((Date.now() - recordStartTs) / 1000));
+                    const blob = new Blob(audioChunks, { type: finalMimeType });
+                    if (!blob || blob.size === 0) return;
+
+                    const reader = new FileReader();
+                    reader.onloadend = () => {
+                        if (reader.result) {
+                            sendPayload({
+                                type: 'voice',
+                                content: String(reader.result),
+                                durationSec,
+                                previewText: `🎙️ [Telsiz Sesi ${formatDurationClock(durationSec)}]`,
+                                isEmergency: emergencyArmed,
+                                isQuantumSuperposition: false
+                            });
+                        }
+                    };
+                    reader.readAsDataURL(blob);
+                };
+
+                mediaRecorder.start(150);
+                isRecordingVoice = true;
+                let elapsedSec = 0;
+                updateVoiceButtonUI(true, formatDurationClock(elapsedSec));
+                updateMicLevelUI(0.1);
+                playKeyBeep(880);
+
+                // Süresiz kayıt sayacı (kullanıcı durdurana kadar devam eder)
+                voiceTimerInterval = setInterval(() => {
+                    elapsedSec++;
+                    updateVoiceButtonUI(true, formatDurationClock(elapsedSec));
+                }, 1000);
+            } catch (err) {
+                stream.getTracks().forEach(t => t.stop());
+                alert("Ses kaydı başlatılamadı. Lütfen tekrar deneyin.");
+            }
+        }
+
+        function stopVoiceRecording() {
+            isRecordingVoice = false;
+            liveMicLevel = 0;
+            updateMicLevelUI(0);
+            updateVoiceButtonUI(false, 'SES');
+            if (voiceTimerInterval) {
+                clearInterval(voiceTimerInterval);
+                voiceTimerInterval = null;
+            }
+            if (micAnalyserRaf) {
+                cancelAnimationFrame(micAnalyserRaf);
+                micAnalyserRaf = null;
+            }
+            if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+                mediaRecorder.stop();
+                playKeyBeep(520);
+            }
+        }
+
+        function updateVoiceButtonUI(recording, text = 'SES') {
+            const btn = document.getElementById('btnVoiceKey');
+            const icon = document.getElementById('voiceKeyIcon');
+            const label = document.getElementById('voiceKeyLabel');
+            if (!btn || !icon || !label) return;
+
+            btn.classList.toggle('recording-voice', recording);
+            icon.className = recording ? 'fa-solid fa-stop text-xs text-white' : 'fa-solid fa-microphone text-xs text-cyan-400';
+            label.innerText = text;
+        }
+
+        function setVoicePillPlayingState(voiceId, playing) {
+            const pill = document.getElementById(`pill_${voiceId}`);
+            const icon = document.getElementById(`vicon_${voiceId}`);
+            const sub = document.getElementById(`vsub_${voiceId}`);
+            const item = voiceDataStore.get(voiceId);
+            const durText = formatDurationClock(item && item.durationSec ? item.durationSec : 1);
+            if (pill) pill.classList.toggle('playing', playing);
+            if (icon) icon.className = playing ? 'fa-solid fa-pause' : 'fa-solid fa-play';
+            if (sub) sub.innerText = playing ? `${durText} · ÇALINIYOR (DURDUR)` : `${durText} · DİNLEMEK İÇİN DOKUN`;
+        }
+
+        function playStoredVoicePacket(voiceId) {
+            const item = voiceDataStore.get(voiceId);
+            const audioSrc = item && (item.dataUrl || item.rawPayload);
+            if (!audioSrc) {
+                alert("Ses verisi bulunamadı.");
+                return;
+            }
+
+            if (activeAudioPlayer && activePlayingVoiceId === voiceId && !activeAudioPlayer.paused) {
+                activeAudioPlayer.pause();
+                activeAudioPlayer.currentTime = 0;
+                setVoicePillPlayingState(voiceId, false);
+                activePlayingVoiceId = null;
+                return;
+            }
+
+            if (activeAudioPlayer) {
+                activeAudioPlayer.pause();
+                if (activePlayingVoiceId) {
+                    setVoicePillPlayingState(activePlayingVoiceId, false);
+                }
+            }
+
+            pulseQuantumWave();
+            if (item.msgId && item.channelKey) {
+                db.ref(`receipts/${item.channelKey}/${item.msgId}`).update({ listened: true, by: myIdShort }).catch(() => {});
+            }
+
+            const audio = new Audio();
+            audio.preload = 'auto';
+            audio.src = audioSrc;
+            audio.currentTime = 0;
+            activeAudioPlayer = audio;
+            activePlayingVoiceId = voiceId;
+            setVoicePillPlayingState(voiceId, true);
+
+            audio.onended = () => {
+                setVoicePillPlayingState(voiceId, false);
+                if (activePlayingVoiceId === voiceId) {
+                    activePlayingVoiceId = null;
+                }
+            };
+
+            audio.onerror = () => {
+                setVoicePillPlayingState(voiceId, false);
+                alert("Ses paketi bu tarayıcıda oynatılamadı.");
+            };
+
+            const playPromise = audio.play();
+            if (playPromise && typeof playPromise.catch === 'function') {
+                playPromise.catch(() => {
+                    setVoicePillPlayingState(voiceId, false);
+                    alert("Ses oynatma başlatılamadı. Lütfen tekrar dokunun.");
+                });
+            }
+        }
+
+        // --- ÇAPRAZ PLATFORM GÖRSEL İNDİRME & ÖNİZLEME ---
+        const imageDataStore = new Map();
+        let activePreviewImageId = null;
+
+        function isAppleIOS() {
+            const ua = navigator.userAgent || '';
+            const isIOSDevice = /iPad|iPhone|iPod/.test(ua);
+            const isIPadOS = navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1;
+            return isIOSDevice || isIPadOS;
+        }
+
+        function dataUrlToBlob(dataUrl) {
+            const parts = dataUrl.split(',');
+            const mimeMatch = parts[0].match(/:(.*?);/);
+            const mime = mimeMatch ? mimeMatch[1] : 'image/jpeg';
+            const binary = atob(parts[1]);
+            const len = binary.length;
+            const buffer = new Uint8Array(len);
+            for (let i = 0; i < len; i++) {
+                buffer[i] = binary.charCodeAt(i);
+            }
+            return new Blob([buffer], { type: mime });
+        }
+
+        async function downloadStoredImage(imageId, event) {
+            if (event) event.stopPropagation();
+            const item = imageDataStore.get(imageId);
+            if (!item || !item.dataUrl) return;
+
+            playKeyBeep(760);
+            const safeSender = (item.sender || 'PAGER').replace(/[^a-zA-Z0-9_-]/g, '');
+            const fileName = `HAMZACHAT_Q_${safeSender}_${Date.now()}.jpg`;
+
+            try {
+                const blob = dataUrlToBlob(item.dataUrl);
+                const file = new File([blob], fileName, { type: blob.type || 'image/jpeg' });
+
+                if (isAppleIOS() && navigator.canShare && navigator.canShare({ files: [file] })) {
+                    await navigator.share({ files: [file], title: fileName });
+                    return;
+                }
+
+                const blobUrl = URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = blobUrl;
+                link.download = fileName;
+                link.rel = 'noopener';
+                link.style.display = 'none';
+                document.body.appendChild(link);
+                link.click();
+
+                setTimeout(() => {
+                    document.body.removeChild(link);
+                    URL.revokeObjectURL(blobUrl);
+                }, 1500);
+            } catch (err) {
+                if (err && err.name === 'AbortError') return;
+                const win = window.open();
+                if (win) {
+                    win.document.write(
+                        `<title>${escapeHtml(fileName)}</title>` +
+                        `<body style="margin:0;background:#000;display:flex;align-items:center;justify-content:center;min-height:100vh;">` +
+                        `<img src="${item.dataUrl}" style="max-width:100%;max-height:100vh;object-fit:contain;" />` +
+                        `</body>`
+                    );
+                }
+            }
+        }
+
+        function openImagePreviewModal(imageId) {
+            const item = imageDataStore.get(imageId);
+            if (!item || !item.dataUrl) return;
+
+            if (item.msgId && item.channelKey) {
+                db.ref(`receipts/${item.channelKey}/${item.msgId}`).update({ viewed: true, by: myIdShort }).catch(() => {});
+            }
+
+            activePreviewImageId = imageId;
+            const modal = document.getElementById('image-preview-modal');
+            const imgEl = document.getElementById('preview-modal-img');
+            const titleEl = document.getElementById('preview-modal-title');
+            const iosHint = document.getElementById('ios-save-hint');
+
+            if (imgEl) imgEl.src = item.dataUrl;
+            if (titleEl) titleEl.innerText = `GÖRSEL // ${item.sender || 'MEDYA'}`;
+            if (iosHint) iosHint.classList.toggle('hidden', !isAppleIOS());
+            if (modal) modal.classList.add('open');
+        }
+
+        function closeImagePreviewModal() {
+            const modal = document.getElementById('image-preview-modal');
+            if (modal) modal.classList.remove('open');
+            activePreviewImageId = null;
+        }
+
+        function downloadCurrentPreviewImage() {
+            if (!activePreviewImageId) return;
+            downloadStoredImage(activePreviewImageId);
+        }
+
+        // --- IPHONE KLAVYE: ÜSTÜ TAŞIRMADAN CANLI YÜKSEKLİKLE HİZALAMA ---
+        function setupIphoneViewportLock() {
+            const appViewport = document.getElementById('appViewport');
+            if (!appViewport) return;
+
+            let baseHeight = window.innerHeight;
+            let rafId = null;
+
+            function syncLiveHeight() {
+                rafId = null;
+                if (window.scrollY !== 0 || window.scrollX !== 0) {
+                    window.scrollTo(0, 0);
+                }
+
+                const vv = window.visualViewport;
+                const currentHeight = vv ? vv.height : window.innerHeight;
+                const offsetTop = vv ? vv.offsetTop : 0;
+
+                if (!vv || (currentHeight >= baseHeight - 40 && offsetTop <= 2)) {
+                    baseHeight = Math.max(baseHeight, currentHeight);
+                }
+
+                const keyboardOpen = (baseHeight - currentHeight - offsetTop) > 110;
+                const usableHeight = Math.max(240, Math.round(currentHeight));
+
+                document.documentElement.style.setProperty('--live-vh', `${usableHeight}px`);
+                appViewport.style.top = '0px';
+                appViewport.style.height = `${usableHeight}px`;
+                appViewport.classList.toggle('kb-open', keyboardOpen);
+
+                if (keyboardOpen) {
+                    scrollToBottom();
+                }
+            }
+
+            function scheduleSync() {
+                if (rafId) cancelAnimationFrame(rafId);
+                rafId = requestAnimationFrame(syncLiveHeight);
+            }
+
+            if (window.visualViewport) {
+                window.visualViewport.addEventListener('resize', scheduleSync);
+            }
+            window.addEventListener('resize', scheduleSync);
+            window.addEventListener('scroll', () => window.scrollTo(0, 0), { passive: false });
+
+            document.addEventListener('touchmove', (e) => {
+                const target = e.target;
+                if (
+                    target &&
+                    (target.closest('#chat-messages') ||
+                     target.closest('#channel-tabs') ||
+                     target.closest('#contacts-list-container') ||
+                     target.closest('.emergency-body-preview'))
+                ) {
+                    return;
+                }
+                e.preventDefault();
+            }, { passive: false });
+
+            syncLiveHeight();
+        }
+
+        // --- FIREBASE KURULUMU ---
+        const firebaseConfig = {
+            apiKey: "AIzaSyCbUororrfe0QulrSrxaWONdOhkHaTtIBs",
+            authDomain: "pagertrk.firebaseapp.com",
+            databaseURL: "https://pagertrk-default-rtdb.firebaseio.com",
+            projectId: "pagertrk",
+            storageBucket: "pagertrk.firebasestorage.app",
+            messagingSenderId: "151073272542",
+            appId: "1:151073272542:web:7ef74267da5bf3f128884f",
+            measurementId: "G-3X4R8ST9PM"
+        };
+
+        if (!firebase.apps.length) {
+            firebase.initializeApp(firebaseConfig);
+        }
+        const db = firebase.database();
+
+        const sessionStartTs = Date.now();
+        let inboxInitialized = false;
+        let globalInitialized = false;
+        let emergencyReady = false;
+        let channelListenerToken = 0;
+
+        let currentChannel = "GLOBAL_EMERGENCY";
+        let activeListenerRef = null;
+        let activeStatusListenerRef = null;
+        let isFirebaseConnected = false;
+        let soundEnabled = true;
+        let notificationsActive = localStorage.getItem('pager_notif_active') !== 'false';
+        let cardEjected = false;
+        let emergencyArmed = false;
+        let quantumSuperpositionArmed = false;
+        let activeCartridge = 'std';
+        let popupAutoHideTimer = null;
+        let lastPopupChannel = null;
+
+        let renderedMessageIds = new Set();
+        const handledAlertKeys = new Set();
+        const unreadMap = {};
+
+        let offlineOutboxQueue = JSON.parse(localStorage.getItem('pager_offline_outbox') || '[]');
+
+        let myIdShort = localStorage.getItem('pager_my_id');
+        if (!myIdShort) {
+            myIdShort = Math.random().toString(36).substring(2, 6).toUpperCase();
+            localStorage.setItem('pager_my_id', myIdShort);
+        }
+
+        let contacts = JSON.parse(localStorage.getItem('pager_contacts') || '{}');
+        let audioCtx = null;
+
+        function scrollToBottom() {
+            const container = document.getElementById('chat-messages');
+            if (!container) return;
+            requestAnimationFrame(() => {
+                container.scrollTop = container.scrollHeight;
+            });
+        }
+
+        function saveOfflineQueue() {
+            localStorage.setItem('pager_offline_outbox', JSON.stringify(offlineOutboxQueue));
+            updateOfflineQueueBanner();
+        }
+
+        function updateOfflineQueueBanner() {
+            const banner = document.getElementById('offlineQueueBanner');
+            const countEl = document.getElementById('offlineQueueCount');
+            if (!banner || !countEl) return;
+            countEl.innerText = String(offlineOutboxQueue.length);
+            banner.classList.toggle('visible', offlineOutboxQueue.length > 0);
+        }
+
+        function manageOfflineQueueModal() {
+            if (offlineOutboxQueue.length === 0) return;
+            if (isFirebaseConnected) {
+                flushOfflineOutboxQueue();
+                return;
+            }
+            if (confirm(`Kuyrukta ${offlineOutboxQueue.length} bekleyen ileti var. Kuyruğu temizlemek ister misiniz?`)) {
+                offlineOutboxQueue = [];
+                saveOfflineQueue();
+            }
+        }
+
+        function flushOfflineOutboxQueue() {
+            if (!isFirebaseConnected || offlineOutboxQueue.length === 0) return;
+
+            const pendingItems = [...offlineOutboxQueue];
+            offlineOutboxQueue = [];
+            saveOfflineQueue();
+
+            pendingItems.forEach(item => {
+                dispatchToFirebase(item);
+            });
+        }
+
+        function toggleQuantumSuperpositionMode() {
+            if (cardEjected) return;
+            initAudio();
+            quantumSuperpositionArmed = !quantumSuperpositionArmed;
+            if (quantumSuperpositionArmed && emergencyArmed) {
+                toggleEmergencyMode();
+            }
+
+            const btn = document.getElementById('btnQuantumToggle');
+            const input = document.getElementById('chat-input');
+            const statusText = document.getElementById('quantumStatusText');
+
+            if (btn) btn.classList.toggle('armed', quantumSuperpositionArmed);
+            if (input) {
+                input.classList.toggle('quantum-armed', quantumSuperpositionArmed);
+                input.placeholder = quantumSuperpositionArmed ? "Ψ SÜPERPOZİSYON (DOKUNUNCA ÇÖZÜLÜR)..." : "Mesaj yaz...";
+                input.focus();
+            }
+            if (statusText) {
+                statusText.innerText = quantumSuperpositionArmed
+                    ? `Ψ SÜPERPOZİSYON // QBER:${currentQber}%`
+                    : `BB84-QKD // QBER:${currentQber}%`;
+            }
+
+            pulseQuantumWave();
+            playKeyBeep(quantumSuperpositionArmed ? 1040 : 520);
+        }
+
+        function toggleEmergencyMode() {
+            if (cardEjected) return;
+            initAudio();
+            emergencyArmed = !emergencyArmed;
+            if (emergencyArmed && quantumSuperpositionArmed) {
+                toggleQuantumSuperpositionMode();
+            }
+
+            const btn = document.getElementById('btnEmergencyToggle');
+            const input = document.getElementById('chat-input');
+            const sendBtn = document.getElementById('send-btn');
+
+            if (btn) btn.classList.toggle('armed', emergencyArmed);
+            if (input) {
+                input.classList.toggle('emergency-armed', emergencyArmed);
+                input.placeholder = emergencyArmed ? "ACİL UYARI MESAJI YAZ..." : "Mesaj yaz...";
+                input.focus();
+            }
+            if (sendBtn) {
+                sendBtn.style.background = emergencyArmed ? '#57b818' : 'var(--accent-orange)';
+                sendBtn.style.borderColor = emergencyArmed ? '#7ef72c' : 'rgba(255,255,255,0.4)';
+            }
+
+            pulseQuantumWave();
+            playKeyBeep(emergencyArmed ? 880 : 440);
+        }
+
+        function selectCartridge(type) {
+            activeCartridge = type;
+            document.body.classList.remove('cartridge-ghost');
+            document.querySelectorAll('.cartridge-chip').forEach(el => el.classList.remove('selected'));
+
+            const selectedBtn = document.getElementById(`cart-btn-${type}`);
+            if (selectedBtn) selectedBtn.classList.add('selected');
+
+            const labelEl = document.getElementById('cassetteCartridgeName');
+            if (type === 'ghost') {
+                document.body.classList.add('cartridge-ghost');
+                if (labelEl) labelEl.innerText = 'Q-GHOST';
+                if (!quantumSuperpositionArmed) {
+                    quantumSuperpositionArmed = true;
+                    document.getElementById('btnQuantumToggle')?.classList.add('armed');
+                }
+            } else {
+                if (labelEl) labelEl.innerText = 'Q-STD OS';
+            }
+            playKeyBeep(680);
+        }
+
+        function toggleCardSlot() {
+            cardEjected = !cardEjected;
+
+            const surface = document.getElementById('screenSurface');
+            const cardBtn = document.getElementById('btnCardKey');
+            const cardLabel = document.getElementById('cardKeyLabel');
+            const cassetteTray = document.getElementById('cassetteTray');
+            const cassetteText = document.getElementById('cassetteStateText');
+
+            if (cardEjected) {
+                dismissEmergencyPopup();
+                if (surface) surface.classList.add('screen-powered-off');
+                if (cardBtn) cardBtn.classList.add('card-ejected');
+                if (cardLabel) cardLabel.innerText = 'TAK';
+                if (cassetteTray) cassetteTray.classList.add('ejected');
+                if (cassetteText) cassetteText.innerText = 'DIŞARIDA';
+                if (currentChannel !== 'GLOBAL_EMERGENCY') {
+                    switchToGlobalChannel();
+                }
+                renderContactTabs();
+                playKeyBeep(240);
+            } else {
+                if (surface) surface.classList.remove('screen-powered-off');
+                if (cardBtn) cardBtn.classList.remove('card-ejected');
+                if (cardLabel) cardLabel.innerText = 'KART';
+                if (cassetteTray) cassetteTray.classList.remove('ejected');
+                if (cassetteText) cassetteText.innerText = 'TAKILI';
+                renderContactTabs();
+                runBb84KeyHandshake();
+                playKeyBeep(560);
+                scrollToBottom();
+            }
+        }
+
+        function triggerEmergencyPopup({ title = 'EMERGENCY ALERT', body = '', sender = 'SYSTEM', channel = null, badgeCount = 1, durationMs = 9500 }) {
+            if (cardEjected) return;
+
+            const overlay = document.getElementById('emergencyPopupOverlay');
+            if (!overlay) return;
+
+            const now = new Date();
+            const dateStr = now.toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' });
+            const timeStr = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+
+            lastPopupChannel = channel;
+
+            document.getElementById('popupUnreadCount').innerText = String(badgeCount);
+            document.getElementById('popupTitle').innerText = title.toUpperCase();
+            document.getElementById('popupDateLine').innerText = dateStr;
+            document.getElementById('popupTimeLine').innerText = timeStr;
+            document.getElementById('popupMessageBody').innerText = body || 'Acil durum bildirimi alındı.';
+            document.getElementById('popupSenderInfo').innerText = `GÖNDEREN: ${sender}`;
+            document.getElementById('popupChannelTag').innerText =
+                (!channel || channel === 'GLOBAL_EMERGENCY') ? 'ORTAK ACİL HAT' : 'ÖZEL ACİL HAT';
+
+            overlay.classList.add('open');
+            pulseQuantumWave();
+            playPagerAlert();
+
+            if (popupAutoHideTimer) clearTimeout(popupAutoHideTimer);
+            popupAutoHideTimer = setTimeout(() => {
+                dismissEmergencyPopup();
+            }, durationMs);
+        }
+
+        function dismissEmergencyPopup() {
+            const overlay = document.getElementById('emergencyPopupOverlay');
+            if (overlay) overlay.classList.remove('open');
+            if (popupAutoHideTimer) {
+                clearTimeout(popupAutoHideTimer);
+                popupAutoHideTimer = null;
+            }
+        }
+
+        function openAlertChannelAndClose() {
+            const targetChannel = lastPopupChannel;
+            dismissEmergencyPopup();
+
+            if (!targetChannel || targetChannel === 'GLOBAL_EMERGENCY') {
+                switchToGlobalChannel();
+                return;
+            }
+
+            const parts = targetChannel.split('_');
+            const otherId = parts.find(p => p && p !== myIdShort) || null;
+            const friendName = (otherId && contacts[otherId]) ? contacts[otherId] : (otherId || 'ÖZEL HAT');
+            switchChannel(targetChannel, friendName, otherId);
+        }
+
+        function triggerPhotoPicker() {
+            if (cardEjected) return;
+            document.getElementById('file-input').click();
+        }
+
+        function initAudio() {
+            if (!audioCtx) {
+                const AudioContext = window.AudioContext || window.webkitAudioContext;
+                if (AudioContext) audioCtx = new AudioContext();
+            }
+            if (audioCtx && audioCtx.state === 'suspended') {
+                audioCtx.resume().catch(() => {});
+            }
+        }
+
+        function playKeyBeep(freq = 580) {
+            if (!soundEnabled) return;
+            initAudio();
+            if (!audioCtx) return;
+            try {
+                const now = audioCtx.currentTime;
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(freq, now);
+                gain.gain.setValueAtTime(0.08, now);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.06);
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.start(now);
+                osc.stop(now + 0.06);
+            } catch (e) {}
+        }
+
+        function triggerUltraHDConfetti() {
+            pulseQuantumWave();
+            if (typeof confetti === 'function') {
+                confetti({
+                    particleCount: 120,
+                    spread: 80,
+                    origin: { y: 0.6 },
+                    colors: ['#ff5a09', '#00f0ff', '#a855f7', '#7ef72c', '#FFD700']
+                });
+            }
+        }
+
+        function playMeowSound() {
+            initAudio();
+            if (!audioCtx) return;
+            try {
+                const now = audioCtx.currentTime;
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(450, now);
+                osc.frequency.exponentialRampToValueAtTime(850, now + 0.15);
+                osc.frequency.exponentialRampToValueAtTime(300, now + 0.45);
+                gain.gain.setValueAtTime(0.01, now);
+                gain.gain.linearRampToValueAtTime(0.2, now + 0.1);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.45);
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.start(now);
+                osc.stop(now + 0.45);
+            } catch (e) {}
+        }
+
+        function playPagerAlert() {
+            if (!soundEnabled) return;
+            initAudio();
+            if (!audioCtx) return;
+            try {
+                const now = audioCtx.currentTime;
+                [0, 0.12, 0.24].forEach(offset => {
+                    const osc = audioCtx.createOscillator();
+                    const gain = audioCtx.createGain();
+                    osc.type = 'square';
+                    osc.frequency.setValueAtTime(2000, now + offset);
+                    gain.gain.setValueAtTime(0.06, now + offset);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + offset + 0.06);
+                    osc.connect(gain);
+                    gain.connect(audioCtx.destination);
+                    osc.start(now + offset);
+                    osc.stop(now + offset + 0.06);
+                });
+            } catch (e) {}
+        }
+
+        db.ref('.info/connected').on('value', (snap) => {
+            const led = document.getElementById('led-indicator');
+            isFirebaseConnected = (snap.val() === true);
+            if (!led) return;
+
+            if (isFirebaseConnected) {
+                led.className = "w-2 h-2 rounded-full bg-emerald-400 flex-shrink-0";
+                led.title = "Çevrimiçi (Kuantum Senkron)";
+                flushOfflineOutboxQueue();
+            } else {
+                led.className = "w-2 h-2 rounded-full bg-amber-400 flex-shrink-0";
+                led.title = "Çevrimdışı Mod (Mesajlar Kuyruğa Alınır)";
+            }
+        });
+
+        function toggleNotifications() {
+            initAudio();
+            if (!('Notification' in window)) {
+                notificationsActive = !notificationsActive;
+                soundEnabled = notificationsActive;
+                localStorage.setItem('pager_notif_active', String(notificationsActive));
+                updateNotificationButtonUI();
+                return;
+            }
+
+            if (Notification.permission === 'granted') {
+                notificationsActive = !notificationsActive;
+                soundEnabled = notificationsActive;
+                localStorage.setItem('pager_notif_active', String(notificationsActive));
+                updateNotificationButtonUI();
+            } else {
+                Notification.requestPermission().then(permission => {
+                    notificationsActive = (permission === 'granted');
+                    soundEnabled = notificationsActive;
+                    localStorage.setItem('pager_notif_active', String(notificationsActive));
+                    updateNotificationButtonUI();
+                }).catch(() => {});
+            }
+        }
+
+        function updateNotificationButtonUI() {
+            const btn = document.getElementById('notif-toggle-btn');
+            const icon = document.getElementById('notif-icon');
+            if (!icon || !btn) return;
+            const isOn = notificationsActive && soundEnabled;
+            icon.className = isOn ? "fa-solid fa-bell" : "fa-solid fa-bell-slash";
+            btn.classList.toggle('muted', !isOn);
+        }
+
+        function triggerSystemNotification(title, bodyText) {
+            if (!notificationsActive) return;
+            if ('Notification' in window && Notification.permission === 'granted') {
+                try {
+                    new Notification(title, {
+                        body: bodyText,
+                        icon: 'https://cdn-icons-png.flaticon.com/512/3602/3602145.png'
+                    });
+                } catch (e) {}
+            }
+        }
+
+        function fallbackCopy(text) {
+            const ta = document.createElement('textarea');
+            ta.value = text;
+            ta.style.position = 'fixed';
+            ta.style.opacity = '0';
+            document.body.appendChild(ta);
+            ta.focus();
+            ta.select();
+            try { document.execCommand('copy'); } catch (e) {}
+            document.body.removeChild(ta);
+        }
+
+        function copyMyId() {
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(myIdShort)
+                    .then(() => alert(`Kuantum Düğüm ID kopyalandı: ${myIdShort}`))
+                    .catch(() => {
+                        fallbackCopy(myIdShort);
+                        alert(`Kuantum Düğüm ID kopyalandı: ${myIdShort}`);
+                    });
+            } else {
+                fallbackCopy(myIdShort);
+                alert(`Kuantum Düğüm ID kopyalandı: ${myIdShort}`);
+            }
+        }
+
+        function clearCurrentChannelMessages() {
+            initAudio();
+            const channelNameDisplay = currentChannel === "GLOBAL_EMERGENCY"
+                ? "ORTAK ALAN"
+                : (window.activeTargetFriendName ? `ÖZEL: ${window.activeTargetFriendName}` : "Bu Özel Hat");
+
+            if (confirm(`${channelNameDisplay} içerisindeki TÜM mesajlar silinecektir. Onaylıyor musunuz?`)) {
+                const clearPath = currentChannel === "GLOBAL_EMERGENCY"
+                    ? "messages_GLOBAL_EMERGENCY"
+                    : `messages_dm/${currentChannel}`;
+                db.ref(clearPath).remove().then(() => {
+                    document.getElementById('chat-messages').innerHTML = '';
+                    renderedMessageIds.clear();
+                });
+            }
+        }
+
+        function pruneOldMessages(path, maxKeep = 60) {
+            db.ref(path).once('value', (snap) => {
+                const count = snap.numChildren();
+                if (count > maxKeep) {
+                    let toDelete = count - maxKeep;
+                    snap.forEach((child) => {
+                        if (toDelete > 0) {
+                            child.ref.remove().catch(() => {});
+                            toDelete--;
+                        }
+                    });
+                }
+            });
+        }
+
+        function sendConfettiSignal() {
+            if (cardEjected) return;
+            playMeowSound();
+            triggerUltraHDConfetti();
+
+            const signalObj = {
+                id: 'confetti_' + Date.now(),
+                type: 'confetti_signal',
+                sender: myIdShort,
+                time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+            };
+
+            const dbPath = currentChannel === "GLOBAL_EMERGENCY"
+                ? "messages_GLOBAL_EMERGENCY"
+                : `messages_dm/${currentChannel}`;
+            db.ref(dbPath).push(signalObj);
+
+            if (currentChannel !== "GLOBAL_EMERGENCY" && window.activeTargetFriend) {
+                db.ref(`inbox/${window.activeTargetFriend}`).push({
+                    from: myIdShort,
+                    channel: currentChannel,
+                    preview: '🎉 [Kuantum Rezonans Sinyali]',
+                    time: signalObj.time
+                });
+            }
+        }
+
+        function handleFileSelected(event) {
+            const file = event.target.files && event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(uploadEvent) {
+                const img = new Image();
+                img.onload = function() {
+                    const canvas = document.createElement('canvas');
+                    let width = img.width;
+                    let height = img.height;
+                    const maxDim = 960;
+
+                    if (width > height && width > maxDim) {
+                        height *= maxDim / width;
+                        width = maxDim;
+                    } else if (height > maxDim) {
+                        width *= maxDim / height;
+                        height = maxDim;
+                    }
+
+                    canvas.width = width;
+                    canvas.height = height;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0, width, height);
+
+                    const compressedBase64 = canvas.toDataURL('image/jpeg', 0.78);
+                    const wasQuantum = quantumSuperpositionArmed;
+                    sendPayload({
+                        type: 'image',
+                        content: compressedBase64,
+                        previewText: wasQuantum ? '⚛️ [Ψ Süperpozisyon Görsel]' : '[Fotoğraf]',
+                        isEmergency: emergencyArmed,
+                        isQuantumSuperposition: wasQuantum
+                    });
+                    if (wasQuantum) toggleQuantumSuperpositionMode();
+                };
+                img.src = uploadEvent.target.result;
+            };
+            reader.readAsDataURL(file);
+            event.target.value = '';
+        }
+
+        function openAddContactModal() {
+            initAudio();
+            const modal = document.getElementById('contact-modal');
+            modal.classList.add('open');
+            setTimeout(() => {
+                const nameInp = document.getElementById('friend-name-input');
+                if (nameInp) nameInp.focus();
+            }, 40);
+        }
+
+        function closeAddContactModal() {
+            document.getElementById('contact-modal').classList.remove('open');
+        }
+
+        function openContactsBookModal() {
+            initAudio();
+            document.getElementById('contacts-book-modal').classList.add('open');
+            const searchInp = document.getElementById('contact-search-input');
+            if (searchInp) searchInp.value = '';
+            renderContactsList();
+        }
+
+        function closeContactsBookModal() {
+            document.getElementById('contacts-book-modal').classList.remove('open');
+        }
+
+        function saveContact() {
+            const idInput = document.getElementById('friend-id-input').value.trim().toUpperCase();
+            const nameInput = document.getElementById('friend-name-input').value.trim() || idInput;
+
+            if (idInput.length !== 4) {
+                alert("Lütfen 4 haneli geçerli bir ID girin.");
+                return;
+            }
+            if (idInput === myIdShort) {
+                alert("Kendinizi rehbere ekleyemezsiniz.");
+                return;
+            }
+
+            contacts[idInput] = nameInput;
+            localStorage.setItem('pager_contacts', JSON.stringify(contacts));
+
+            closeAddContactModal();
+            document.getElementById('friend-id-input').value = '';
+            document.getElementById('friend-name-input').value = '';
+
+            renderContactTabs();
+            switchChannel(`${getDmKey(myIdShort, idInput)}`, nameInput, idInput);
+        }
+
+        function deleteContact(friendId, event) {
+            if (event) event.stopPropagation();
+            if (confirm(`"${contacts[friendId]}" kişisini rehberden silmek istediğinize emin misiniz?`)) {
+                delete contacts[friendId];
+                localStorage.setItem('pager_contacts', JSON.stringify(contacts));
+                renderContactTabs();
+                renderContactsList(document.getElementById('contact-search-input').value || '');
+
+                if (currentChannel.includes(friendId)) {
+                    switchToGlobalChannel();
+                }
+            }
+        }
+
+        function renderContactsList(filterQuery = '') {
+            const container = document.getElementById('contacts-list-container');
+            const entries = Object.entries(contacts);
+            if (entries.length === 0) {
+                container.innerHTML = `<div class="text-center text-zinc-400 py-5 text-xs">Henüz dolanıklık kurulmuş kişi yok.</div>`;
+                return;
+            }
+
+            const query = filterQuery.toLowerCase();
+            let html = '';
+            let count = 0;
+
+            for (const [friendId, friendName] of entries) {
+                if (query && !friendName.toLowerCase().includes(query) && !friendId.toLowerCase().includes(query)) {
+                    continue;
+                }
+                count++;
+                const dmKey = getDmKey(myIdShort, friendId);
+                const safeNameAttr = escapeJsSingle(friendName);
+                const safeIdAttr = escapeJsSingle(friendId);
+                const safeDmKeyAttr = escapeJsSingle(dmKey);
+
+                html += `
+                    <div onclick="closeContactsBookModal(); switchChannel('${safeDmKeyAttr}', '${safeNameAttr}', '${safeIdAttr}')"
+                         class="flex items-center justify-between p-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 cursor-pointer transition">
+                        <div class="flex items-center gap-2 min-w-0">
+                            <div class="w-7 h-7 rounded-lg bg-cyan-600 text-white flex items-center justify-center font-bold text-xs flex-shrink-0">
+                                <i class="fa-solid fa-atom"></i>
+                            </div>
+                            <div class="flex flex-col min-w-0">
+                                <span class="font-bold text-xs text-white truncate">${escapeHtml(friendName)}</span>
+                                <span class="font-mono text-[10px] text-cyan-400">EPR-ID: ${escapeHtml(friendId)}</span>
+                            </div>
+                        </div>
+                        <button type="button" onclick="deleteContact('${safeIdAttr}', event)" title="Kişiyi Sil" class="p-1.5 rounded-lg text-zinc-400 hover:text-red-400 flex-shrink-0">
+                            <i class="fa-solid fa-trash text-xs"></i>
+                        </button>
+                    </div>
+                `;
+            }
+
+            if (count === 0) {
+                html = `<div class="text-center text-zinc-400 py-5 text-xs">Aradığınız kritere uygun kişi bulunamadı.</div>`;
+            }
+            container.innerHTML = html;
+        }
+
+        function filterContactsList(val) {
+            renderContactsList(val);
+        }
+
+        function getDmKey(id1, id2) {
+            return [id1, id2].sort().join('_');
+        }
+
+        function renderContactTabs() {
+            const container = document.getElementById('channel-tabs');
+            let html = '';
+
+            const globalUnread = unreadMap['GLOBAL_EMERGENCY'] || 0;
+            const globalActive = currentChannel === 'GLOBAL_EMERGENCY';
+            html += `
+                <button type="button" onclick="switchToGlobalChannel()" class="channel-tab ${globalActive ? 'active' : ''}">
+                    <i class="fa-solid fa-tower-broadcast"></i>
+                    <span>HERKES</span>
+                    ${globalUnread > 0 ? `<span class="bg-lime-400 text-black text-[9px] px-1.5 py-0.5 rounded-full font-extrabold">${globalUnread}</span>` : ''}
+                </button>
+            `;
+
+            if (!cardEjected) {
+                for (const [friendId, friendName] of Object.entries(contacts)) {
+                    const channelKey = getDmKey(myIdShort, friendId);
+                    const isActive = currentChannel === channelKey;
+                    const unreadCount = unreadMap[channelKey] || 0;
+                    const safeNameAttr = escapeJsSingle(friendName);
+                    const safeIdAttr = escapeJsSingle(friendId);
+                    const safeKeyAttr = escapeJsSingle(channelKey);
+
+                    html += `
+                        <button type="button" onclick="switchChannel('${safeKeyAttr}', '${safeNameAttr}', '${safeIdAttr}')" class="channel-tab ${isActive ? 'active' : ''}">
+                            <i class="fa-solid fa-atom text-[9px]"></i>
+                            <span>${escapeHtml(friendName)}</span>
+                            ${unreadCount > 0 ? `<span class="bg-lime-400 text-black text-[9px] px-1.5 py-0.5 rounded-full font-extrabold">${unreadCount}</span>` : ''}
+                        </button>
+                    `;
+                }
+            }
+
+            container.innerHTML = html;
+        }
+
+        function switchToGlobalChannel() {
+            initAudio();
+            currentChannel = "GLOBAL_EMERGENCY";
+            window.activeTargetFriend = null;
+            window.activeTargetFriendName = null;
+            unreadMap['GLOBAL_EMERGENCY'] = 0;
+            document.getElementById('active-chat-title').innerText = "ORTAK ALAN";
+            renderContactTabs();
+            runBb84KeyHandshake();
+            switchChannelListener("messages_GLOBAL_EMERGENCY", "GLOBAL_EMERGENCY");
+        }
+
+        function switchChannel(channelKey, titleName, friendId) {
+            if (cardEjected) return;
+            initAudio();
+            currentChannel = channelKey;
+            window.activeTargetFriend = friendId;
+            window.activeTargetFriendName = titleName;
+            unreadMap[channelKey] = 0;
+            document.getElementById('active-chat-title').innerText = titleName ? `EPR: ${titleName}` : "ÖZEL HAT";
+            renderContactTabs();
+            runBb84KeyHandshake();
+            switchChannelListener(`messages_dm/${channelKey}`, channelKey);
+        }
+
+        function applyReceiptBadge(msgId, val) {
+            const badgeEl = document.getElementById(`status_${msgId}`);
+            if (!badgeEl || !val) return;
+            if (val.observed) {
+                badgeEl.innerText = '👁️ GÖZLEMLENDİ';
+                badgeEl.className = 'text-purple-300 font-bold';
+            } else if (val.listened) {
+                badgeEl.innerText = '🔊 DİNLENDİ';
+                badgeEl.className = 'text-emerald-400 font-bold';
+            } else if (val.viewed) {
+                badgeEl.innerText = '👁️ GÖRÜLDÜ';
+                badgeEl.className = 'text-cyan-300 font-bold';
+            } else if (val.delivered) {
+                badgeEl.innerText = '✓✓';
+                badgeEl.className = 'text-cyan-400 font-bold';
+            }
+        }
+
+        function switchChannelListener(firebasePath, encryptionKey) {
+            const chatBox = document.getElementById('chat-messages');
+            if (chatBox) chatBox.innerHTML = '';
+            renderedMessageIds = new Set();
+
+            if (activeListenerRef) {
+                activeListenerRef.off();
+                activeListenerRef = null;
+            }
+            if (activeStatusListenerRef) {
+                activeStatusListenerRef.off();
+                activeStatusListenerRef = null;
+            }
+
+            const token = ++channelListenerToken;
+            const channelOpenTime = Date.now();
+            const ref = db.ref(firebasePath);
+            activeListenerRef = ref;
+
+            const statusRef = db.ref(`receipts/${encryptionKey}`);
+            activeStatusListenerRef = statusRef;
+            statusRef.on('child_changed', (snap) => {
+                if (token !== channelListenerToken) return;
+                applyReceiptBadge(snap.key, snap.val());
+            });
+            statusRef.on('child_added', (snap) => {
+                if (token !== channelListenerToken) return;
+                applyReceiptBadge(snap.key, snap.val());
+            });
+
+            ref.on('child_added', async (snapshot) => {
+                if (token !== channelListenerToken) return;
+                const msg = snapshot.val();
+                if (!msg) return;
+
+                const uniqueKey = msg.id || snapshot.key;
+                if (renderedMessageIds.has(uniqueKey)) return;
+                renderedMessageIds.add(uniqueKey);
+
+                if (msg.type === 'confetti_signal') {
+                    const msgTs = msg.clientTs || parseInt((msg.id || '').replace('confetti_', '')) || 0;
+                    if (msg.sender !== myIdShort && msgTs > channelOpenTime) {
+                        playPagerAlert();
+                        playMeowSound();
+                        triggerUltraHDConfetti();
+                        triggerSystemNotification(`PAGER // ${msg.sender}`, "🎉 Kuantum Rezonans Sinyali!");
+                    }
+                    return;
+                }
+
+                if (msg.sender !== myIdShort && msg.id) {
+                    db.ref(`receipts/${encryptionKey}/${msg.id}`).update({ delivered: true, by: myIdShort }).catch(() => {});
+                }
+
+                await renderMessage(msg, encryptionKey, false);
+
+                const msgTs = msg.clientTs || parseInt(((msg.id || '').split('_')[1]) || '0') || 0;
+                if (msg.sender !== myIdShort && msgTs > channelOpenTime) {
+                    const decryptedText = msg.type === 'image'
+                        ? (msg.isQuantumSuperposition ? '⚛️ [Ψ Süperpozisyon Görsel]' : '[Fotoğraf Alındı]')
+                        : (msg.type === 'voice'
+                            ? '🎙️ [Telsiz Ses Paketi]'
+                            : (msg.isQuantumSuperposition ? '⚛️ [Süperpozisyon Paketi]' : await decryptTextQuantum(msg.encryptedText, encryptionKey)));
+
+                    if (msg.isEmergency) {
+                        const alertKey = 'ch_emg_' + uniqueKey;
+                        if (!handledAlertKeys.has(alertKey)) {
+                            handledAlertKeys.add(alertKey);
+                            triggerEmergencyPopup({
+                                title: 'EMERGENCY ALERT',
+                                body: decryptedText,
+                                sender: msg.sender,
+                                channel: encryptionKey,
+                                badgeCount: 1
+                            });
+                        }
+                    } else {
+                        playPagerAlert();
+                    }
+                    triggerSystemNotification(
+                        msg.isEmergency ? `🚨 ACİL // ${msg.sender}` : `Q-PAGER // ${msg.sender}`,
+                        decryptedText
+                    );
+                }
+            });
+        }
+
+        async function handleFormSubmit(e) {
+            e.preventDefault();
+            if (cardEjected) return;
+            initAudio();
+            const input = document.getElementById('chat-input');
+            const text = input.value.trim();
+            if (!text) return;
+
+            const isEmergency = emergencyArmed;
+            const isQuantumSuperposition = quantumSuperpositionArmed;
+            playKeyBeep(isEmergency ? 920 : (isQuantumSuperposition ? 1040 : 720));
+
+            input.value = '';
+
+            await sendPayload({
+                type: 'text',
+                content: text,
+                previewText: text,
+                isEmergency,
+                isQuantumSuperposition
+            });
+
+            if (emergencyArmed) toggleEmergencyMode();
+            if (quantumSuperpositionArmed) toggleQuantumSuperpositionMode();
+        }
+
+        async function sendPayload(payloadObj) {
+            const encrypted = (payloadObj.type === 'text')
+                ? await encryptTextQuantum(payloadObj.content, currentChannel)
+                : payloadObj.content;
+
+            const nowTime = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            const nowTs = Date.now();
+            const msgId = 'msg_' + nowTs + '_' + Math.random().toString(36).slice(2, 6);
+
+            const msgObj = {
+                id: msgId,
+                type: payloadObj.type,
+                sender: myIdShort,
+                encryptedText: encrypted,
+                durationSec: payloadObj.durationSec || null,
+                isEmergency: Boolean(payloadObj.isEmergency),
+                isQuantumSuperposition: Boolean(payloadObj.isQuantumSuperposition),
+                clientTs: nowTs,
+                time: nowTime
+            };
+
+            const isQueued = !isFirebaseConnected;
+
+            if (!renderedMessageIds.has(msgObj.id)) {
+                renderedMessageIds.add(msgObj.id);
+                await renderMessage(msgObj, currentChannel, isQueued);
+            }
+
+            pulseQuantumWave();
+
+            const packet = {
+                msgObj,
+                channel: currentChannel,
+                targetFriend: window.activeTargetFriend || null,
+                previewText: payloadObj.previewText
+            };
+
+            if (isQueued) {
+                offlineOutboxQueue.push(packet);
+                saveOfflineQueue();
+                return;
+            }
+
+            dispatchToFirebase(packet);
+        }
+
+        function dispatchToFirebase({ msgObj, channel, targetFriend, previewText }) {
+            const dbPath = channel === "GLOBAL_EMERGENCY"
+                ? "messages_GLOBAL_EMERGENCY"
+                : `messages_dm/${channel}`;
+
+            db.ref(dbPath).push(msgObj).then(() => {
+                const statusEl = document.getElementById(`status_${msgObj.id}`);
+                if (statusEl && statusEl.innerText === '⏳') {
+                    statusEl.innerText = '✓';
+                }
+                if (channel === "GLOBAL_EMERGENCY") {
+                    pruneOldMessages("messages_GLOBAL_EMERGENCY", 70);
+                }
+            });
+
+            if (msgObj.isEmergency) {
+                const alertId = 'emg_' + msgObj.clientTs + '_' + myIdShort + '_' + Math.random().toString(36).slice(2, 6);
+                handledAlertKeys.add(alertId);
+
+                const emergencyEvent = {
+                    alertId,
+                    from: myIdShort,
+                    target: channel === "GLOBAL_EMERGENCY" ? "ALL" : (targetFriend || "ALL"),
+                    channel,
+                    message: previewText,
+                    clientTs: msgObj.clientTs,
+                    time: msgObj.time
+                };
+                db.ref('emergency_broadcasts').push(emergencyEvent).then(() => {
+                    pruneOldMessages('emergency_broadcasts', 30);
+                });
+
+                triggerEmergencyPopup({
+                    title: 'EMERGENCY SENT',
+                    body: previewText,
+                    sender: myIdShort,
+                    channel,
+                    badgeCount: 1,
+                    durationMs: 3200
+                });
+            }
+
+            if (channel !== "GLOBAL_EMERGENCY" && targetFriend) {
+                db.ref(`inbox/${targetFriend}`).push({
+                    from: myIdShort,
+                    channel,
+                    preview: msgObj.isQuantumSuperposition
+                        ? '⚛️ [Süperpozisyon Paketi]'
+                        : (msgObj.isEmergency
+                            ? `🚨 [ACİL] ${previewText.substring(0, 45)}`
+                            : previewText.substring(0, 30)),
+                    isEmergency: Boolean(msgObj.isEmergency),
+                    clientTs: msgObj.clientTs,
+                    time: msgObj.time
+                });
+            }
+        }
+
+        function collapseQuantumWave(elementId, plainText, msgId, encryptionKey) {
+            const box = document.getElementById(elementId);
+            if (!box || box.dataset.collapsed === 'true') return;
+            box.dataset.collapsed = 'true';
+
+            initAudio();
+            pulseQuantumWave();
+            playKeyBeep(1120);
+
+            if (msgId && encryptionKey) {
+                db.ref(`receipts/${encryptionKey}/${msgId}`).update({ observed: true, by: myIdShort }).catch(() => {});
+            }
+
+            box.className = 'px-3 py-1.5 text-[12.5px] leading-snug selectable-text bubble-collapsed-state';
+            box.innerHTML = `
+                <div class="quantum-collapsed-badge">
+                    <i class="fa-solid fa-eye"></i> DALGA ÇÖKTÜ · <span id="timer_${elementId}">10</span>s
+                </div>
+                <div>${escapeHtml(plainText)}</div>
+            `;
+
+            let left = 10;
+            const interval = setInterval(() => {
+                left--;
+                const timerSpan = document.getElementById(`timer_${elementId}`);
+                if (timerSpan) timerSpan.innerText = String(left);
+                if (left <= 0) {
+                    clearInterval(interval);
+                    box.style.opacity = '0.45';
+                    box.innerHTML = `<span class="font-mono text-[10px] text-zinc-400 italic">[Kuantum Dekoherans: Veri Evrene Dağıldı]</span>`;
+                }
+            }, 1000);
+        }
+
+        function collapseQuantumPhoto(elementId, imageId, msgId, encryptionKey) {
+            const box = document.getElementById(elementId);
+            if (!box) return;
+            if (box.dataset.collapsed === 'true') {
+                openImagePreviewModal(imageId);
+                return;
+            }
+            box.dataset.collapsed = 'true';
+            initAudio();
+            pulseQuantumWave();
+            playKeyBeep(1120);
+
+            if (msgId && encryptionKey) {
+                db.ref(`receipts/${encryptionKey}/${msgId}`).update({ observed: true, by: myIdShort }).catch(() => {});
+            }
+
+            const imgEl = box.querySelector('img');
+            const badgeEl = box.querySelector('.q-photo-overlay');
+            if (imgEl) {
+                imgEl.style.filter = 'none';
+                imgEl.style.transform = 'scale(1)';
+            }
+            if (badgeEl) {
+                badgeEl.innerHTML = '<i class="fa-solid fa-eye"></i> NETLEŞTİ (BÜYÜTMEK İÇİN DOKUN)';
+            }
+
+            setTimeout(() => {
+                box.style.opacity = '0.35';
+                if (badgeEl) badgeEl.innerHTML = '<i class="fa-solid fa-atom"></i> DEKOHERANS TAMAMLANDI';
+            }, 10000);
+        }
+
+        async function renderMessage(m, encryptionKey, isQueued = false) {
+            const container = document.getElementById('chat-messages');
+            if (!container) return;
+            const isMe = m.sender === myIdShort;
+
+            let contentHtml = '';
+            let isSuperpositionUncollapsed = false;
+            const collapseDomId = 'qmsg_' + (m.id || (Date.now() + '_' + Math.random().toString(36).slice(2, 6)));
+
+            if (m.type === 'image') {
+                const imgStoreId = 'img_' + (m.id || (Date.now() + '_' + Math.random().toString(36).slice(2, 6)));
+                imageDataStore.set(imgStoreId, {
+                    dataUrl: m.encryptedText,
+                    sender: m.sender || 'PAGER',
+                    msgId: m.id,
+                    channelKey: encryptionKey
+                });
+                const safeSrc = escapeHtml(m.encryptedText);
+                const safeIdAttr = escapeJsSingle(imgStoreId);
+                const safeMsgIdJs = escapeJsSingle(m.id || '');
+                const safeEncKeyJs = escapeJsSingle(encryptionKey || '');
+
+                if (m.isQuantumSuperposition && !isMe) {
+                    isSuperpositionUncollapsed = true;
+                    contentHtml = `
+                        <div id="${collapseDomId}" onclick="collapseQuantumPhoto('${collapseDomId}', '${safeIdAttr}', '${safeMsgIdJs}', '${safeEncKeyJs}')" class="quantum-photo-superposition">
+                            <img src="${safeSrc}" onload="scrollToBottom()" alt="Ψ Görsel" class="rounded-lg max-w-full h-auto max-h-40 object-cover block" />
+                            <div class="q-photo-overlay mt-1 px-2 py-1 rounded bg-purple-950/90 font-mono text-[9.5px] font-extrabold text-purple-200 flex items-center gap-1">
+                                <i class="fa-solid fa-atom animate-spin"></i>
+                                <span>|Ψ⟩ GÖRSEL SÜPERPOZİSYONU · DOKUN</span>
+                            </div>
+                        </div>
+                    `;
+                } else {
+                    contentHtml = `
+                        <div class="chat-image-wrap">
+                            <img src="${safeSrc}"
+                                 onload="scrollToBottom()"
+                                 onclick="openImagePreviewModal('${safeIdAttr}')"
+                                 alt="Gönderilen Görsel"
+                                 class="rounded-lg max-w-full h-auto max-h-40 object-cover border border-white/20 cursor-pointer block" />
+                            <button type="button"
+                                    onclick="downloadStoredImage('${safeIdAttr}', event)"
+                                    title="Görseli İndir"
+                                    class="img-download-pill">
+                                <i class="fa-solid fa-download"></i>
+                                <span>İNDİR</span>
+                            </button>
+                        </div>
+                    `;
+                }
+            } else if (m.type === 'voice') {
+                const voiceStoreId = 'voice_' + (m.id || (Date.now() + '_' + Math.random().toString(36).slice(2, 6)));
+                const durSec = m.durationSec || 1;
+                voiceDataStore.set(voiceStoreId, {
+                    dataUrl: m.encryptedText,
+                    rawPayload: m.encryptedText,
+                    durationSec: durSec,
+                    msgId: m.id,
+                    channelKey: encryptionKey
+                });
+                const safeVoiceId = escapeJsSingle(voiceStoreId);
+                const durClock = formatDurationClock(durSec);
+
+                contentHtml = `
+                    <div id="pill_${escapeHtml(voiceStoreId)}" class="voice-packet-pill" onclick="playStoredVoicePacket('${safeVoiceId}')">
+                        <div class="voice-play-circle">
+                            <i id="vicon_${escapeHtml(voiceStoreId)}" class="fa-solid fa-play"></i>
+                        </div>
+                        <div class="flex flex-col leading-tight">
+                            <span class="font-mono text-[10px] font-extrabold">TELSİZ SES PAKETİ</span>
+                            <span id="vsub_${escapeHtml(voiceStoreId)}" class="font-mono text-[9px] opacity-85">${durClock} · DİNLEMEK İÇİN DOKUN</span>
+                        </div>
+                    </div>
+                `;
+            } else {
+                const plain = await decryptTextQuantum(m.encryptedText, encryptionKey);
+
+                if (m.isQuantumSuperposition && !isMe) {
+                    isSuperpositionUncollapsed = true;
+                    const safePlainJs = escapeJsSingle(plain);
+                    const safeMsgIdJs = escapeJsSingle(m.id || '');
+                    const safeEncKeyJs = escapeJsSingle(encryptionKey || '');
+                    contentHtml = `
+                        <div id="${collapseDomId}" onclick="collapseQuantumWave('${collapseDomId}', '${safePlainJs}', '${safeMsgIdJs}', '${safeEncKeyJs}')" class="quantum-superposition-box">
+                            <div class="font-mono text-[10px] font-extrabold text-purple-200 flex items-center gap-1.5">
+                                <i class="fa-solid fa-atom animate-spin"></i>
+                                <span>|Ψ⟩ SÜPERPOZİSYON PAKETİ</span>
+                            </div>
+                            <div class="text-[10px] text-purple-300 mt-0.5">Gözlemlemek için dokun (10sn sonra imha olur)</div>
+                        </div>
+                    `;
+                } else {
+                    const qTag = m.isQuantumSuperposition ? '<span class="mr-1 font-mono text-[9.5px] text-purple-200">[|Ψ⟩]</span>' : '';
+                    const prefix = m.isEmergency ? '<span class="mr-1 font-mono text-[9.5px] uppercase">[ACİL]</span>' : '';
+                    contentHtml = qTag + prefix + escapeHtml(plain);
+                }
+            }
+
+            const bubbleClass = m.isEmergency
+                ? 'bubble-emergency'
+                : (isMe ? 'bubble-me' : 'bubble-other');
+
+            const paddingClass = (m.type === 'image' || isSuperpositionUncollapsed) ? 'p-1.5' : 'px-3 py-1.5';
+            const statusIndicator = isMe
+                ? ` · <span id="status_${escapeHtml(m.id || '')}" class="opacity-90">${isQueued ? '⏳' : '✓'}</span>`
+                : '';
+
+            const msgEl = document.createElement('div');
+            msgEl.className = `flex flex-col gap-0.5 max-w-[86%] ${isMe ? 'self-end items-end' : 'self-start items-start'}`;
+            msgEl.innerHTML = `
+                <div class="text-[9px] opacity-75 px-1 font-mono"><b>${escapeHtml(m.sender)}</b> · ${escapeHtml(m.time || '')}${statusIndicator}</div>
+                <div class="${paddingClass} text-[12.5px] leading-snug selectable-text ${isSuperpositionUncollapsed ? '' : bubbleClass}">
+                    ${contentHtml}
+                </div>
+            `;
+            container.appendChild(msgEl);
+            scrollToBottom();
+        }
+
+        function initBackgroundPager() {
+            db.ref('emergency_broadcasts').limitToLast(25).on('child_added', (snapshot) => {
+                const alertData = snapshot.val();
+                if (!alertData || alertData.from === myIdShort) return;
+
+                const alertKey = alertData.alertId || snapshot.key;
+                if (handledAlertKeys.has(alertKey)) return;
+                handledAlertKeys.add(alertKey);
+
+                const ts = alertData.clientTs || 0;
+                if (!emergencyReady && ts < sessionStartTs - 3000) return;
+
+                const isForMe = (alertData.target === 'ALL' || alertData.target === myIdShort);
+                if (!isForMe) return;
+
+                if (alertData.channel && alertData.channel !== currentChannel) {
+                    unreadMap[alertData.channel] = (unreadMap[alertData.channel] || 0) + 1;
+                    renderContactTabs();
+                }
+
+                triggerEmergencyPopup({
+                    title: 'EMERGENCY ALERT',
+                    body: alertData.message || 'Acil durum bildirimi!',
+                    sender: alertData.from,
+                    channel: alertData.channel || 'GLOBAL_EMERGENCY',
+                    badgeCount: (alertData.channel && unreadMap[alertData.channel]) ? unreadMap[alertData.channel] : 1,
+                    durationMs: 9500
+                });
+
+                triggerSystemNotification(`🚨 EMERGENCY ALERT [${alertData.from}]`, alertData.message || 'Acil durum bildirimi!');
+            });
+
+            db.ref(`inbox/${myIdShort}`).on('child_added', (snapshot) => {
+                const data = snapshot.val();
+                if (!data || data.from === myIdShort) return;
+
+                if (data.channel && data.channel !== currentChannel) {
+                    unreadMap[data.channel] = (unreadMap[data.channel] || 0) + 1;
+                    renderContactTabs();
+                }
+
+                if (inboxInitialized) {
+                    if (data.isEmergency) {
+                        const alertKey = 'in_emg_' + snapshot.key;
+                        if (!handledAlertKeys.has(alertKey)) {
+                            handledAlertKeys.add(alertKey);
+                            triggerEmergencyPopup({
+                                title: 'EMERGENCY ALERT',
+                                body: data.preview || 'Acil özel mesaj alındı.',
+                                sender: data.from,
+                                channel: data.channel || null,
+                                badgeCount: data.channel ? (unreadMap[data.channel] || 1) : 1,
+                                durationMs: 9500
+                            });
+                        }
+                    } else {
+                        playPagerAlert();
+                    }
+                    triggerSystemNotification(`YENİ ÇAĞRI [${data.from}]`, data.preview || "Özel mesaj alındı.");
+                }
+            });
+
+            db.ref('messages_GLOBAL_EMERGENCY').on('child_added', async (snapshot) => {
+                const msg = snapshot.val();
+                if (!msg || msg.sender === myIdShort) return;
+
+                if (globalInitialized && currentChannel !== 'GLOBAL_EMERGENCY') {
+                    unreadMap['GLOBAL_EMERGENCY'] = (unreadMap['GLOBAL_EMERGENCY'] || 0) + 1;
+                    renderContactTabs();
+                    if (msg.isEmergency) {
+                        const alertKey = 'g_emg_' + (msg.id || snapshot.key);
+                        if (!handledAlertKeys.has(alertKey)) {
+                            handledAlertKeys.add(alertKey);
+                            const bodyTxt = msg.type === 'image'
+                                ? '[Acil Fotoğraf]'
+                                : (msg.type === 'voice' ? '🎙️ [Acil Telsiz Sesi]' : await decryptTextQuantum(msg.encryptedText, 'GLOBAL_EMERGENCY'));
+                            triggerEmergencyPopup({
+                                title: 'EMERGENCY ALERT',
+                                body: bodyTxt,
+                                sender: msg.sender,
+                                channel: 'GLOBAL_EMERGENCY',
+                                badgeCount: unreadMap['GLOBAL_EMERGENCY'],
+                                durationMs: 9500
+                            });
+                        }
+                    } else {
+                        playPagerAlert();
+                    }
+                }
+            });
+        }
+
+        document.getElementById('image-preview-modal').addEventListener('click', (e) => {
+            if (e.target.id === 'image-preview-modal') closeImagePreviewModal();
+        });
+
+        document.getElementById('contact-modal').addEventListener('click', (e) => {
+            if (e.target.id === 'contact-modal') closeAddContactModal();
+        });
+
+        document.getElementById('contacts-book-modal').addEventListener('click', (e) => {
+            if (e.target.id === 'contacts-book-modal') closeContactsBookModal();
+        });
+
+        ['friend-name-input', 'friend-id-input'].forEach(id => {
+            const el = document.getElementById(id);
+            if (el) {
+                el.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
+                        saveContact();
+                    }
+                });
+            }
+        });
+
+        window.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                closeImagePreviewModal();
+                dismissEmergencyPopup();
+                closeAddContactModal();
+                closeContactsBookModal();
+            }
+        });
+
+        function bootstrapTerminal() {
+            setupIphoneViewportLock();
+            startQuantumWaveOscilloscope();
+            updateNotificationButtonUI();
+            updateOfflineQueueBanner();
+            document.getElementById('my-identity').innerText = `ID: ${myIdShort}`;
+
+            initBackgroundPager();
+
+            db.ref(`inbox/${myIdShort}`).once('value', () => {
+                inboxInitialized = true;
+            });
+            db.ref('messages_GLOBAL_EMERGENCY').once('value', () => {
+                globalInitialized = true;
+            });
+            db.ref('emergency_broadcasts').limitToLast(25).once('value', () => {
+                emergencyReady = true;
+            });
+
+            if ('serviceWorker' in navigator) {
+                navigator.serviceWorker.register('./sw.js')
+                    .then(reg => console.log('Service Worker Kaydedildi:', reg.scope))
+                    .catch(() => console.info('sw.js bulunamadı veya yerel ortamda atlandı.'));
+            }
+
+            if ('Notification' in window && Notification.permission === 'default' && notificationsActive) {
+                Notification.requestPermission().then(perm => {
+                    notificationsActive = (perm === 'granted');
+                    soundEnabled = notificationsActive;
+                    localStorage.setItem('pager_notif_active', String(notificationsActive));
+                    updateNotificationButtonUI();
+                }).catch(() => {});
+            }
+
+            document.body.addEventListener('click', () => initAudio(), { once: true });
+
+            renderContactTabs();
+            switchToGlobalChannel();
+        }
+
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', bootstrapTerminal);
+        } else {
+            bootstrapTerminal();
+        }
+    </script>
+</body>
+</html>
